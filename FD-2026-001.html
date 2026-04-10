@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FD-2026-001 - 不動産評価レポート</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', 'Hiragino Sans', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+  .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+  h1 { font-size: 1.4em; border-bottom: 2px solid #388bfd; padding-bottom: 10px; margin-bottom: 20px; }
+  h2 { font-size: 1.1em; color: #388bfd; margin: 25px 0 10px; border-left: 4px solid #388bfd; padding-left: 10px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; }
+  .badge-hold { background: #9e6a03; }
+  .score-big { font-size: 2.5em; font-weight: bold; text-align: center; margin: 15px 0; }
+  .score-big .num { color: #f0883e; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #21262d; font-size: 0.9em; }
+  th { color: #8b949e; font-weight: normal; width: 35%; }
+  .risk-high { color: #f85149; }
+  .risk-mid { color: #f0883e; }
+  .risk-low { color: #3fb950; }
+  .flow-box { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; margin: 10px 0; font-family: monospace; font-size: 0.85em; white-space: pre-line; }
+  .score-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 0.85em; }
+  .score-label { width: 140px; color: #8b949e; text-align: right; }
+  .score-bar { flex: 1; background: #21262d; border-radius: 4px; height: 18px; position: relative; }
+  .score-fill { height: 100%; border-radius: 4px; }
+  .score-val { width: 50px; text-align: right; }
+  .photo-item { padding: 6px 0; border-bottom: 1px solid #21262d; font-size: 0.9em; }
+  .action-box { background: #0d419d; border-radius: 8px; padding: 15px; margin: 10px 0; }
+  .action-box ol { padding-left: 20px; }
+  .action-box li { margin: 5px 0; }
+  .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; }
+  .card-title { color: #8b949e; font-size: 0.8em; margin-bottom: 5px; }
+  .card-value { font-size: 1.3em; font-weight: bold; }
+  .card-value.positive { color: #3fb950; }
+  .card-value.negative { color: #f85149; }
+  .card-value.neutral { color: #f0883e; }
+  .timeline { position: relative; padding-left: 20px; margin: 15px 0; }
+  .timeline::before { content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: #30363d; }
+  .timeline-item { position: relative; margin: 12px 0; font-size: 0.85em; }
+  .timeline-item::before { content: ''; position: absolute; left: -17px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: #30363d; }
+  .timeline-item.highlight::before { background: #388bfd; }
+  .footer { text-align: center; color: #484f58; font-size: 0.75em; margin-top: 40px; padding-top: 20px; border-top: 1px solid #21262d; }
+
+  /* ボタンエリア */
+  .decision-area { text-align: center; margin: 35px 0; padding: 25px; background: #161b22; border: 1px solid #30363d; border-radius: 12px; }
+  .decision-area h2 { border: none; text-align: center; margin-bottom: 20px; padding: 0; }
+  .decision-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+  .btn { padding: 14px 32px; border: none; border-radius: 8px; font-size: 1em; font-weight: bold; cursor: pointer; transition: all 0.2s; min-width: 160px; }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+  .btn-interest { background: #1f6feb; color: #fff; }
+  .btn-interest:hover { background: #388bfd; }
+  .btn-buy { background: #238636; color: #fff; }
+  .btn-buy:hover { background: #2ea043; }
+  .btn-skip { background: #21262d; color: #8b949e; border: 1px solid #30363d; }
+  .btn-skip:hover { background: #30363d; color: #e6edf3; }
+
+  /* 追加分析パネル */
+  .panel { display: none; margin-top: 20px; text-align: left; }
+  .panel.active { display: block; }
+  .panel-interest { background: #0c2d6b; border: 1px solid #1f6feb; border-radius: 8px; padding: 20px; }
+  .panel-buy { background: #0d2818; border: 1px solid #238636; border-radius: 8px; padding: 20px; }
+  .panel-skip { background: #1c1212; border: 1px solid #da3633; border-radius: 8px; padding: 20px; text-align: center; }
+  .panel h3 { margin-bottom: 12px; }
+  .panel textarea { width: 100%; height: 100px; background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 12px; font-size: 0.9em; resize: vertical; font-family: inherit; }
+  .panel textarea:focus { outline: none; border-color: #388bfd; }
+  .panel textarea::placeholder { color: #484f58; }
+  .btn-submit { margin-top: 12px; padding: 10px 24px; background: #1f6feb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; }
+  .btn-submit:hover { background: #388bfd; }
+  .checklist { list-style: none; padding: 0; }
+  .checklist li { padding: 8px 0; border-bottom: 1px solid #21262d; display: flex; align-items: center; gap: 8px; }
+  .checklist li::before { content: '☐'; font-size: 1.1em; }
+  .btn-back { margin-top: 15px; padding: 8px 20px; background: transparent; color: #8b949e; border: 1px solid #30363d; border-radius: 6px; cursor: pointer; font-size: 0.85em; }
+  .btn-back:hover { color: #e6edf3; border-color: #8b949e; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>FD-2026-001｜東京都 東久留米市 中央町4-1-38</h1>
+
+<table>
+  <tr><th>価格</th><td>380万円（税込・仲介手数料なし）</td></tr>
+  <tr><th>構造</th><td>木造2階建て｜再建築不可</td></tr>
+  <tr><th>用途地域</th><td>第一種低層住居専用（建ぺい40%/容積80%）</td></tr>
+  <tr><th>最寄駅</th><td>西武池袋線 東久留米駅 徒歩約20分</td></tr>
+  <tr><th>備考</th><td>現況有姿・境界非明示・残置無し・再建築不可</td></tr>
+  <tr><th>資料</th><td><a href="https://drive.google.com/drive/folders/1LUgdaOJJdBhBUlUWe_yYbM99OCHdHBdH" style="color:#388bfd;" target="_blank">Google Drive で確認</a></td></tr>
+</table>
+
+<h2>スコア</h2>
+<div class="score-big"><span class="num">47</span>/100 <span class="badge badge-hold">△ 保留</span></div>
+
+<div style="margin:15px 0;">
+  <div class="score-row">
+    <span class="score-label">価格妥当性</span>
+    <div class="score-bar"><div class="score-fill" style="width:80%;background:#3fb950;"></div></div>
+    <span class="score-val">16/20</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">利回り</span>
+    <div class="score-bar"><div class="score-fill" style="width:55%;background:#f0883e;"></div></div>
+    <span class="score-val">11/20</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">立地</span>
+    <div class="score-bar"><div class="score-fill" style="width:47%;background:#f0883e;"></div></div>
+    <span class="score-val">7/15</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">建物状態</span>
+    <div class="score-bar"><div class="score-fill" style="width:27%;background:#f85149;"></div></div>
+    <span class="score-val">4/15</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">土地ポテンシャル</span>
+    <div class="score-bar"><div class="score-fill" style="width:30%;background:#f85149;"></div></div>
+    <span class="score-val">3/10</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">リスク</span>
+    <div class="score-bar"><div class="score-fill" style="width:30%;background:#f85149;"></div></div>
+    <span class="score-val">3/10</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">出口戦略</span>
+    <div class="score-bar"><div class="score-fill" style="width:30%;background:#f85149;"></div></div>
+    <span class="score-val">3/10</span>
+  </div>
+</div>
+
+<h2>写真判定</h2>
+<div class="photo-item"><span class="risk-high">🔴</span> 雨漏り — 天井にシミが明確に確認</div>
+<div class="photo-item"><span class="risk-high">🔴</span> トイレ全面カビ・腐食 — 壁・床とも全面やり直し</div>
+<div class="photo-item"><span class="risk-high">🔴</span> 室内壁崩落 — クロス大きく剥がれ落ちている</div>
+<div class="photo-item"><span class="risk-mid">🟡</span> 外壁クラック — モルタル壁にヒビ割れ</div>
+<div class="photo-item"><span class="risk-mid">🟡</span> シロアリ懸念 — 小屋裏・床下の木材に劣化</div>
+<div class="photo-item"><span class="risk-low">🟢</span> 階段 — 構造的にはまだ使えそう</div>
+<div class="photo-item"><span class="risk-low">🟢</span> 収納 — 比較的まし。清掃で対応可</div>
+
+<h2>リフォーム見積もり</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="card-title">DIY併用（推奨）</div>
+    <div class="card-value neutral">150〜250万</div>
+  </div>
+  <div class="card">
+    <div class="card-title">業者丸投げ</div>
+    <div class="card-value negative">300〜550万</div>
+  </div>
+</div>
+
+<h2>収支サマリー（300万指値の場合）</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="card-title">総投資額</div>
+    <div class="card-value">470万</div>
+    <div style="font-size:0.75em;color:#8b949e;">物件300+諸費用20+リフォーム150</div>
+  </div>
+  <div class="card">
+    <div class="card-title">想定賃料</div>
+    <div class="card-value">6万/月</div>
+    <div style="font-size:0.75em;color:#8b949e;">年間72万</div>
+  </div>
+  <div class="card">
+    <div class="card-title">年間ネットCF</div>
+    <div class="card-value positive">+48万/年</div>
+    <div style="font-size:0.75em;color:#8b949e;">月4万（税・保険・積立控除後）</div>
+  </div>
+  <div class="card">
+    <div class="card-title">実質利回り</div>
+    <div class="card-value neutral">12.4%</div>
+    <div style="font-size:0.75em;color:#8b949e;">目標15%に対してやや不足</div>
+  </div>
+</div>
+
+<h2>10年保有キャッシュフロー</h2>
+<div class="flow-box">初期投資:      -470万
+10年累計CF:    +450万
+売却(10年後):  +330万
+譲渡税:         0万
+仲介手数料:    -10万
+━━━━━━━━━━━━━━
+最終手残り:    +770万
+<span style="color:#3fb950;font-weight:bold;">最終利益:     +300万</span></div>
+
+<h2>投資回収タイムライン</h2>
+<div class="timeline">
+  <div class="timeline-item">0年 — 投資 ▲470万</div>
+  <div class="timeline-item">3年 — 回収144万（31%）</div>
+  <div class="timeline-item">5年 — 回収235万（50%）半分回収</div>
+  <div class="timeline-item">7年 — 回収321万（68%）売ればトントン</div>
+  <div class="timeline-item highlight">10年 — 回収450万（96%）ほぼ全額回収</div>
+  <div class="timeline-item">15年 — 回収665万（141%）投資額の1.4倍</div>
+</div>
+
+<h2>融資</h2>
+<table>
+  <tr><th>融資難易度</th><td class="risk-high">✕ 難（再建築不可）</td></tr>
+  <tr><th>推奨</th><td>公庫（事業用）or 既存物件を担保に不動産担保ローン or 現金買い</td></tr>
+</table>
+
+<h2>指値提案</h2>
+<table>
+  <tr><th>推奨指値</th><td style="font-weight:bold;font-size:1.1em;">300万円（▲80万・21%OFF）</td></tr>
+  <tr><th>根拠①</th><td>修繕費150万以上必要（雨漏り+カビ+壁崩落）</td></tr>
+  <tr><th>根拠②</th><td>利回り逆算: 賃料72万÷15%=480万−リフォーム150万=330万が上限</td></tr>
+  <tr><th>根拠③</th><td>再建築不可で担保価値ゼロ。買い手が限定的</td></tr>
+  <tr><th>交渉カード</th><td>現金買い・即決・瑕疵承知・契約不適合免責OK</td></tr>
+</table>
+
+<h2>出口戦略</h2>
+<table>
+  <tr><th>最推奨</th><td><strong>長期保有10年〜</strong>（CF積み上げ型）</td></tr>
+  <tr><th>7年後OC売却</th><td>累計CF321万 + 売却350万 = 手残り660万</td></tr>
+  <tr><th>結論</th><td>出口で儲けるタイプではない。CFで稼ぐ物件</td></tr>
+</table>
+
+<h2>推奨アクション</h2>
+<div class="action-box">
+<ol>
+  <li>現地確認（シロアリ・傾き・構造）</li>
+  <li>屋根＋水回りの概算を業者に取る</li>
+  <li><strong>300万で指値</strong>（現金買い・即決を武器に）</li>
+  <li>公庫に事業用融資の相談（ダメなら現金）</li>
+</ol>
+</div>
+
+<!-- 判断ボタンエリア -->
+<div class="decision-area" id="decisionArea">
+  <h2>この物件どうする？</h2>
+  <div class="decision-buttons" id="decisionButtons">
+    <button class="btn btn-interest" onclick="showPanel('interest')">興味ある</button>
+    <button class="btn btn-buy" onclick="showPanel('buy')">購入したい</button>
+    <button class="btn btn-skip" onclick="showPanel('skip')">要らない</button>
+  </div>
+
+  <!-- 興味あるパネル -->
+  <div class="panel panel-interest" id="panel-interest">
+    <h3>どの部分を詳しく知りたいですか？</h3>
+    <textarea id="interestInput" placeholder="例：&#10;・シロアリの被害がどの程度か詳しく&#10;・近隣の賃貸需要の詳細&#10;・DIYリフォームの具体的な手順と日数&#10;・融資で公庫に通すための事業計画書&#10;・周辺の客付け業者リスト&#10;・この物件の固定資産税の正確な金額"></textarea>
+    <button class="btn-submit" onclick="submitInterest()">追加分析を依頼する</button>
+    <button class="btn-back" onclick="resetPanel()">戻る</button>
+    <div id="interestResult" style="margin-top:15px;"></div>
+  </div>
+
+  <!-- 購入したいパネル -->
+  <div class="panel panel-buy" id="panel-buy">
+    <h3>購入に向けて準備するもの</h3>
+    <ul class="checklist">
+      <li>買付証明書の作成（指値300万で作成）</li>
+      <li>物件エリアの客付け業者リスト</li>
+      <li>融資相談用の事業計画書</li>
+      <li>リフォーム計画書（DIY/業者の振り分け）</li>
+      <li>現地確認チェックリスト</li>
+    </ul>
+    <textarea id="buyInput" placeholder="追加でほしいもの・変更したい条件があれば入力&#10;例：指値を280万にしたい、現地調査の日程を組みたい"></textarea>
+    <button class="btn-submit" onclick="submitBuy()">購入準備を開始する</button>
+    <button class="btn-back" onclick="resetPanel()">戻る</button>
+    <div id="buyResult" style="margin-top:15px;"></div>
+  </div>
+
+  <!-- 要らないパネル -->
+  <div class="panel panel-skip" id="panel-skip">
+    <p style="font-size:1.2em;margin-bottom:10px;">この物件を見送りますか？</p>
+    <p style="color:#8b949e;margin-bottom:15px;">台帳のステータスが「見送り」に更新されます</p>
+    <button class="btn" style="background:#da3633;color:#fff;" onclick="confirmSkip()">見送り確定</button>
+    <button class="btn-back" onclick="resetPanel()">やっぱり戻る</button>
+    <div id="skipResult" style="margin-top:15px;"></div>
+  </div>
+</div>
+
+<div class="footer">CCカンパニー 不動産部門｜生成日: 2026-04-11</div>
+
+</div>
+
+<script>
+function showPanel(type) {
+  document.getElementById('decisionButtons').style.display = 'none';
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + type).classList.add('active');
+}
+
+function resetPanel() {
+  document.getElementById('decisionButtons').style.display = 'flex';
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+}
+
+function submitInterest() {
+  const input = document.getElementById('interestInput').value;
+  if (!input.trim()) { alert('知りたい内容を入力してください'); return; }
+
+  const result = document.getElementById('interestResult');
+  result.innerHTML = '<div style="background:#0d1117;border:1px solid #1f6feb;border-radius:6px;padding:15px;margin-top:10px;">'
+    + '<p style="color:#3fb950;font-weight:bold;">追加分析リクエストを受け付けました</p>'
+    + '<p style="color:#8b949e;font-size:0.85em;margin-top:8px;">リクエスト内容:</p>'
+    + '<p style="margin-top:5px;">' + input.replace(/\n/g, '<br>') + '</p>'
+    + '<p style="color:#8b949e;font-size:0.85em;margin-top:12px;">※ VPS構築後、Discord Botが自動で追加分析を実行してレポートを更新します</p>'
+    + '</div>';
+
+  // VPS構築後はここでAPIを叩いて追加分析を実行する
+  // fetch('/api/analyze', { method: 'POST', body: JSON.stringify({ propertyId: 'FD-2026-001', query: input }) })
+}
+
+function submitBuy() {
+  const input = document.getElementById('buyInput').value;
+  const result = document.getElementById('buyResult');
+  result.innerHTML = '<div style="background:#0d1117;border:1px solid #238636;border-radius:6px;padding:15px;margin-top:10px;">'
+    + '<p style="color:#3fb950;font-weight:bold;">購入準備リクエストを受け付けました</p>'
+    + '<p style="color:#8b949e;font-size:0.85em;margin-top:8px;">以下の書類を生成します:</p>'
+    + '<ul style="margin-top:8px;padding-left:20px;font-size:0.9em;">'
+    + '<li>買付証明書（指値300万）</li>'
+    + '<li>客付け業者リスト（東久留米市エリア）</li>'
+    + '<li>事業計画書（公庫融資用）</li>'
+    + '<li>リフォーム計画書</li>'
+    + '<li>現地確認チェックリスト</li>'
+    + '</ul>'
+    + (input ? '<p style="color:#8b949e;font-size:0.85em;margin-top:12px;">追加リクエスト: ' + input.replace(/\n/g, '<br>') + '</p>' : '')
+    + '<p style="color:#8b949e;font-size:0.85em;margin-top:12px;">※ VPS構築後、自動で書類を生成してDiscordに通知します</p>'
+    + '</div>';
+
+  // VPS構築後はここでAPIを叩く
+  // fetch('/api/purchase-prep', { method: 'POST', body: JSON.stringify({ propertyId: 'FD-2026-001', notes: input }) })
+}
+
+function confirmSkip() {
+  const result = document.getElementById('skipResult');
+  result.innerHTML = '<div style="background:#0d1117;border:1px solid #da3633;border-radius:6px;padding:15px;margin-top:10px;">'
+    + '<p style="color:#f85149;font-weight:bold;">FD-2026-001 を見送りにしました</p>'
+    + '<p style="color:#8b949e;font-size:0.85em;margin-top:8px;">台帳ステータス: 見送り</p>'
+    + '</div>';
+
+  // VPS構築後はここでステータスを更新
+  // fetch('/api/update-status', { method: 'POST', body: JSON.stringify({ propertyId: 'FD-2026-001', status: 'skipped' }) })
+}
+</script>
+
+</body>
+</html>
