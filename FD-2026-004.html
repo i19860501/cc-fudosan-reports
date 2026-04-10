@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FD-2026-004 - 不動産評価レポート</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', 'Hiragino Sans', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+  .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+  h1 { font-size: 1.4em; border-bottom: 2px solid #388bfd; padding-bottom: 10px; margin-bottom: 20px; }
+  h2 { font-size: 1.1em; color: #388bfd; margin: 25px 0 10px; border-left: 4px solid #388bfd; padding-left: 10px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; }
+  .badge-buy { background: #238636; }
+  .badge-hold { background: #9e6a03; }
+  .badge-skip { background: #da3633; }
+  .score-big { font-size: 2.5em; font-weight: bold; text-align: center; margin: 15px 0; }
+  .score-big .num { color: #f0883e; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #21262d; font-size: 0.9em; }
+  th { color: #8b949e; font-weight: normal; width: 35%; }
+  .risk-high { color: #f85149; }
+  .risk-mid { color: #f0883e; }
+  .risk-low { color: #3fb950; }
+  .flow-box { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; margin: 10px 0; font-family: monospace; font-size: 0.85em; white-space: pre-line; }
+  .score-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 0.85em; }
+  .score-label { width: 140px; color: #8b949e; text-align: right; }
+  .score-bar { flex: 1; background: #21262d; border-radius: 4px; height: 18px; position: relative; }
+  .score-fill { height: 100%; border-radius: 4px; }
+  .score-val { width: 50px; text-align: right; }
+  .photo-item { padding: 6px 0; border-bottom: 1px solid #21262d; font-size: 0.9em; }
+  .action-box { background: #0d419d; border-radius: 8px; padding: 15px; margin: 10px 0; }
+  .action-box ol { padding-left: 20px; }
+  .action-box li { margin: 5px 0; }
+  .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; }
+  .card-title { color: #8b949e; font-size: 0.8em; margin-bottom: 5px; }
+  .card-value { font-size: 1.3em; font-weight: bold; }
+  .card-value.positive { color: #3fb950; }
+  .card-value.negative { color: #f85149; }
+  .card-value.neutral { color: #f0883e; }
+  .timeline { position: relative; padding-left: 20px; margin: 15px 0; }
+  .timeline::before { content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: #30363d; }
+  .timeline-item { position: relative; margin: 12px 0; font-size: 0.85em; }
+  .timeline-item::before { content: ''; position: absolute; left: -17px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: #30363d; }
+  .timeline-item.highlight::before { background: #388bfd; }
+  .footer { text-align: center; color: #484f58; font-size: 0.75em; margin-top: 40px; padding-top: 20px; border-top: 1px solid #21262d; }
+  .decision-area { text-align: center; margin: 35px 0; padding: 25px; background: #161b22; border: 1px solid #30363d; border-radius: 12px; }
+  .decision-area h2 { border: none; text-align: center; margin-bottom: 20px; padding: 0; }
+  .decision-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+  .btn { padding: 14px 32px; border: none; border-radius: 8px; font-size: 1em; font-weight: bold; cursor: pointer; transition: all 0.2s; min-width: 160px; }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+  .btn-interest { background: #1f6feb; color: #fff; }
+  .btn-interest:hover { background: #388bfd; }
+  .btn-buy { background: #238636; color: #fff; }
+  .btn-buy:hover { background: #2ea043; }
+  .btn-skip { background: #21262d; color: #8b949e; border: 1px solid #30363d; }
+  .btn-skip:hover { background: #30363d; color: #e6edf3; }
+  .panel { display: none; margin-top: 20px; text-align: left; }
+  .panel.active { display: block; }
+  .panel-interest { background: #0c2d6b; border: 1px solid #1f6feb; border-radius: 8px; padding: 20px; }
+  .panel-buy { background: #0d2818; border: 1px solid #238636; border-radius: 8px; padding: 20px; }
+  .panel-skip { background: #1c1212; border: 1px solid #da3633; border-radius: 8px; padding: 20px; text-align: center; }
+  .panel h3 { margin-bottom: 12px; }
+  .panel textarea { width: 100%; height: 100px; background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 12px; font-size: 0.9em; resize: vertical; font-family: inherit; }
+  .panel textarea:focus { outline: none; border-color: #388bfd; }
+  .panel textarea::placeholder { color: #484f58; }
+  .btn-submit { margin-top: 12px; padding: 10px 24px; background: #1f6feb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; }
+  .btn-submit:hover { background: #388bfd; }
+  .checklist { list-style: none; padding: 0; }
+  .checklist li { padding: 8px 0; border-bottom: 1px solid #21262d; display: flex; align-items: center; gap: 8px; }
+  .checklist li::before { content: '\2610'; font-size: 1.1em; }
+  .btn-back { margin-top: 15px; padding: 8px 20px; background: transparent; color: #8b949e; border: 1px solid #30363d; border-radius: 6px; cursor: pointer; font-size: 0.85em; }
+  .btn-back:hover { color: #e6edf3; border-color: #8b949e; }
+  .urgent { background: #f8514922; border: 1px solid #f85149; border-radius: 8px; padding: 12px; margin: 10px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>FD-2026-004｜千葉県 松戸市 平賀136-2</h1>
+
+<div class="urgent">
+  <strong style="color:#f85149;">&#x26A0; 締め切り: 4月17日 &#x26A0;</strong>
+  <span style="font-size:0.85em;color:#8b949e;"> 残り7日 -- 早急な判断が必要</span>
+</div>
+
+<table>
+  <tr><th>価格</th><td>500万円（税込・仲介手数料なし）</td></tr>
+  <tr><th>構造</th><td>木造戸建て｜築45年（昭和55年2月）｜旧耐震</td></tr>
+  <tr><th>土地</th><td>123.27㎡（37.29坪）｜宅地｜所有権</td></tr>
+  <tr><th>建物</th><td>89.23㎡（26.99坪）</td></tr>
+  <tr><th>用途地域</th><td>第一種低層住居専用地域（建ぺい50%/容積100%）｜市街化区域</td></tr>
+  <tr><th>最寄駅</th><td>JR常磐線 北小金駅 徒歩13分</td></tr>
+  <tr><th>設備</th><td>公営水道・公共下水・プロパンガス</td></tr>
+  <tr><th>備考</th><td class="risk-high">現況有姿・リフォーム推奨・傾きあり・雨漏りあり・内見不可・駐車1台可・境界調査中</td></tr>
+  <tr><th>土地値参考</th><td>相続税路線価79,000円 x 123.27㎡ = <strong>974万円</strong>（500万は土地値の51%）</td></tr>
+  <tr><th>資料</th><td><a href="https://drive.google.com/drive/folders/1YAFRMBrYRtgDGykcwtLXgmiwyy0SEYLj" style="color:#388bfd;" target="_blank">Google Drive で確認</a></td></tr>
+</table>
+
+<h2>スコア</h2>
+<div class="score-big"><span class="num">62</span>/100 <span class="badge badge-hold">△ 要検討（締切注意）</span></div>
+
+<div style="margin:15px 0;">
+  <div class="score-row">
+    <span class="score-label">価格妥当性</span>
+    <div class="score-bar"><div class="score-fill" style="width:90%;background:#3fb950;"></div></div>
+    <span class="score-val">18/20</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">利回り</span>
+    <div class="score-bar"><div class="score-fill" style="width:45%;background:#f0883e;"></div></div>
+    <span class="score-val">9/20</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">立地</span>
+    <div class="score-bar"><div class="score-fill" style="width:73%;background:#3fb950;"></div></div>
+    <span class="score-val">11/15</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">建物状態</span>
+    <div class="score-bar"><div class="score-fill" style="width:20%;background:#f85149;"></div></div>
+    <span class="score-val">3/15</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">土地ポテンシャル</span>
+    <div class="score-bar"><div class="score-fill" style="width:90%;background:#3fb950;"></div></div>
+    <span class="score-val">9/10</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">リスク</span>
+    <div class="score-bar"><div class="score-fill" style="width:40%;background:#f85149;"></div></div>
+    <span class="score-val">4/10</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">出口戦略</span>
+    <div class="score-bar"><div class="score-fill" style="width:80%;background:#3fb950;"></div></div>
+    <span class="score-val">8/10</span>
+  </div>
+</div>
+
+<h2>写真判定</h2>
+<p style="font-size:0.85em;color:#8b949e;margin-bottom:8px;">※Drive写真100枚以上確認（API制限により個別DL不可・内見不可物件）</p>
+<div class="photo-item"><span class="risk-high">&#x1F534;</span> 傾き -- 概要書に「傾きあり」と明記。構造的な問題の可能性大</div>
+<div class="photo-item"><span class="risk-high">&#x1F534;</span> 雨漏り -- 概要書に「雨漏りあり」と明記。屋根・天井の大規模修繕必要</div>
+<div class="photo-item"><span class="risk-high">&#x1F534;</span> 内見不可 -- 建物内部の状態を確認できないリスク</div>
+<div class="photo-item"><span class="risk-high">&#x1F534;</span> 旧耐震 -- 昭和55年築で旧耐震基準。耐震補強が必要な可能性</div>
+<div class="photo-item"><span class="risk-low">&#x1F7E2;</span> 駅距離 -- JR常磐線 北小金駅 徒歩13分は賃貸需要あり</div>
+<div class="photo-item"><span class="risk-low">&#x1F7E2;</span> 土地値 -- 路線価974万に対して500万は大幅割安</div>
+
+<h2>リフォーム見積もり</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="card-title">DIY併用</div>
+    <div class="card-value negative">200~350万</div>
+    <div style="font-size:0.75em;color:#8b949e;">傾き補正は業者必須。雨漏り修繕+内装</div>
+  </div>
+  <div class="card">
+    <div class="card-title">業者丸投げ</div>
+    <div class="card-value negative">400~700万</div>
+    <div style="font-size:0.75em;color:#8b949e;">傾き+雨漏り+耐震+内装フル</div>
+  </div>
+</div>
+<p style="font-size:0.8em;color:#f85149;margin-top:5px;">※傾き補正だけで100~300万かかる可能性あり。雨漏りの範囲次第で更に増額</p>
+
+<h2>初期投資 内訳（500万の場合）</h2>
+<table>
+  <tr><th>物件価格</th><td style="text-align:right;">500.0万</td></tr>
+  <tr><th>仲介手数料</th><td style="text-align:right;color:#3fb950;">0万（業者売り・手数料なし）</td></tr>
+  <tr><th>登録免許税（土地）</th><td style="text-align:right;">約5.5万 <span style="color:#8b949e;font-size:0.8em;">※評価額推定370万×1.5%</span></td></tr>
+  <tr><th>登録免許税（建物）</th><td style="text-align:right;">約1.5万 <span style="color:#8b949e;font-size:0.8em;">※評価額推定75万×2%</span></td></tr>
+  <tr><th>司法書士報酬</th><td style="text-align:right;">約8万（売主指定）</td></tr>
+  <tr><th>不動産取得税</th><td style="text-align:right;">約7万 <span style="color:#8b949e;font-size:0.8em;">※後日請求</span></td></tr>
+  <tr><th>印紙税</th><td style="text-align:right;">0.5万</td></tr>
+  <tr><th>固定資産税精算金</th><td style="text-align:right;">約3万</td></tr>
+  <tr><th>火災保険（初年度）</th><td style="text-align:right;">約2万</td></tr>
+  <tr style="border-top:2px solid #388bfd;"><th>購入諸費用 小計</th><td style="text-align:right;font-weight:bold;">約27.5万</td></tr>
+  <tr><th>リフォーム費用（DIY併用）</th><td style="text-align:right;">300万</td></tr>
+  <tr style="border-top:2px solid #e6edf3;"><th style="font-weight:bold;color:#e6edf3;">総投資額</th><td style="text-align:right;font-weight:bold;font-size:1.2em;color:#f0883e;">827.5万</td></tr>
+</table>
+
+<h2>収支サマリー</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="card-title">総投資額</div>
+    <div class="card-value">828万</div>
+    <div style="font-size:0.75em;color:#8b949e;">物件500+諸費用28+リフォーム300</div>
+  </div>
+  <div class="card">
+    <div class="card-title">想定賃料</div>
+    <div class="card-value">7万/月</div>
+    <div style="font-size:0.75em;color:#8b949e;">年間84万（概要書4.2万は低すぎ。北小金徒歩13分で7万想定）</div>
+  </div>
+  <div class="card">
+    <div class="card-title">年間ネットCF</div>
+    <div class="card-value positive">+56万/年</div>
+    <div style="font-size:0.75em;color:#8b949e;">月4.7万（税・保険・修繕積立控除後）</div>
+  </div>
+  <div class="card">
+    <div class="card-title">実質利回り</div>
+    <div class="card-value neutral">10.1%</div>
+    <div style="font-size:0.75em;color:#8b949e;">リフォーム込みだとやや物足りない</div>
+  </div>
+</div>
+
+<h2>出口戦略（この物件の真価は土地）</h2>
+<div class="flow-box">【シナリオA: 賃貸後に更地売却（7年後）】
+初期投資:      -828万
+7年累計CF:     +392万
+更地渡し売却:  +800万（路線価974万の82%で想定）
+解体費:        -150万
+譲渡税(長期):  -40万
+━━━━━━━━━━━━━━
+最終手残り:    +1,002万
+<span style="color:#3fb950;font-weight:bold;">最終利益:     +174万</span>
+
+【シナリオB: 古家付き土地として即売却】
+購入:          -528万（物件500+諸費用28）
+古家付売却:    +700万（路線価の72%）
+譲渡税(短期): -50万
+━━━━━━━━━━━━━━
+<span style="color:#3fb950;font-weight:bold;">最終利益:     +122万（転売益）</span></div>
+
+<h2>投資回収タイムライン</h2>
+<div class="timeline">
+  <div class="timeline-item">0年 -- 投資 -828万</div>
+  <div class="timeline-item">3年 -- 回収168万（20%）</div>
+  <div class="timeline-item">5年 -- 回収280万（34%）</div>
+  <div class="timeline-item highlight">7年 -- 回収392万（47%）+ 土地売却でプラス</div>
+  <div class="timeline-item">10年 -- 回収560万（68%）</div>
+  <div class="timeline-item">15年 -- 回収840万（101%）CF単体で回収完了</div>
+</div>
+
+<h2>融資</h2>
+<table>
+  <tr><th>融資難易度</th><td class="risk-mid">△ やや難（傾き・雨漏り・旧耐震）</td></tr>
+  <tr><th>推奨</th><td>土地値が高いため不動産担保ローンは可能性あり。公庫に事業用融資相談。500万なら現金も検討</td></tr>
+</table>
+
+<h2>指値提案</h2>
+<table>
+  <tr><th>推奨指値</th><td style="font-weight:bold;font-size:1.1em;">400万円（-100万・20%OFF）</td></tr>
+  <tr><th>根拠(1)</th><td>傾き補正100~300万 + 雨漏り修繕50~100万 = 最低150万の修繕費必要</td></tr>
+  <tr><th>根拠(2)</th><td>内見不可でリスクが不明確。その分ディスカウント要求は妥当</td></tr>
+  <tr><th>根拠(3)</th><td>旧耐震で融資困難、買い手が限定的</td></tr>
+  <tr><th>交渉カード</th><td>現金買い・即決・締切前の確実な買い手・瑕疵承知</td></tr>
+  <tr><th>最低ライン</th><td>450万まで（それ以上なら見送り）</td></tr>
+</table>
+
+<h2>推奨アクション</h2>
+<div class="action-box">
+<ol>
+  <li><strong style="color:#f85149;">4/17締切！速やかに判断</strong></li>
+  <li>土地値974万 vs 500万 = 土地だけで474万のスプレッド（最大の魅力）</li>
+  <li>傾き・雨漏りの修繕費が鍵。最悪300万かかると総額800万超で利回り悪化</li>
+  <li>「土地転売」目的なら修繕不要で利益122万のシナリオあり</li>
+  <li><strong>400万で指値 → ダメなら450万まで</strong></li>
+</ol>
+</div>
+
+<!-- 判断ボタンエリア -->
+<div class="decision-area" id="decisionArea">
+  <h2>この物件どうする？</h2>
+  <div class="decision-buttons" id="decisionButtons">
+    <button class="btn btn-interest" onclick="showPanel('interest')">興味ある</button>
+    <button class="btn btn-buy" onclick="showPanel('buy')">購入したい</button>
+    <button class="btn btn-skip" onclick="showPanel('skip')">要らない</button>
+  </div>
+
+  <div class="panel panel-interest" id="panel-interest">
+    <h3>どの部分を詳しく知りたいですか？</h3>
+    <textarea id="interestInput" placeholder="例：&#10;・傾きの程度と補正費用の詳細&#10;・雨漏りの原因と修繕範囲&#10;・土地転売の具体的な手順&#10;・近隣の成約事例"></textarea>
+    <button class="btn-submit" onclick="submitInterest()">追加分析を依頼する</button>
+    <button class="btn-back" onclick="resetPanel()">戻る</button>
+    <div id="interestResult" style="margin-top:15px;"></div>
+  </div>
+
+  <div class="panel panel-buy" id="panel-buy">
+    <h3>購入に向けて準備するもの</h3>
+    <ul class="checklist">
+      <li>買付証明書の作成（指値400万で作成）</li>
+      <li>傾き・雨漏り対応の業者リスト</li>
+      <li>土地転売シナリオの詳細計画</li>
+      <li>松戸市エリアの客付け業者リスト</li>
+      <li>融資相談資料（土地担保評価書）</li>
+    </ul>
+    <textarea id="buyInput" placeholder="追加でほしいもの・変更したい条件があれば入力"></textarea>
+    <button class="btn-submit" onclick="submitBuy()">購入準備を開始する</button>
+    <button class="btn-back" onclick="resetPanel()">戻る</button>
+    <div id="buyResult" style="margin-top:15px;"></div>
+  </div>
+
+  <div class="panel panel-skip" id="panel-skip">
+    <p style="font-size:1.2em;margin-bottom:10px;">この物件を見送りますか？</p>
+    <p style="color:#8b949e;margin-bottom:15px;">台帳のステータスが「見送り」に更新されます</p>
+    <button class="btn" style="background:#da3633;color:#fff;" onclick="confirmSkip()">見送り確定</button>
+    <button class="btn-back" onclick="resetPanel()">やっぱり戻る</button>
+    <div id="skipResult" style="margin-top:15px;"></div>
+  </div>
+</div>
+
+<div class="footer">CCカンパニー 不動産部門｜生成日: 2026-04-10</div>
+
+</div>
+
+<script>
+function showPanel(type) {
+  document.getElementById('decisionButtons').style.display = 'none';
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + type).classList.add('active');
+}
+function resetPanel() {
+  document.getElementById('decisionButtons').style.display = 'flex';
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+}
+function submitInterest() {
+  const input = document.getElementById('interestInput').value;
+  if (!input.trim()) { alert('知りたい内容を入力してください'); return; }
+  const result = document.getElementById('interestResult');
+  result.innerHTML = '<div style="background:#0d1117;border:1px solid #1f6feb;border-radius:6px;padding:15px;margin-top:10px;">'
+    + '<p style="color:#3fb950;font-weight:bold;">追加分析リクエストを受け付けました</p>'
+    + '<p style="color:#8b949e;font-size:0.85em;margin-top:8px;">リクエスト内容:</p>'
+    + '<p style="margin-top:5px;">' + input.replace(/\n/g, '<br>') + '</p>'
+    + '</div>';
+}
+function submitBuy() {
+  const input = document.getElementById('buyInput').value;
+  const result = document.getElementById('buyResult');
+  result.innerHTML = '<div style="background:#0d1117;border:1px solid #238636;border-radius:6px;padding:15px;margin-top:10px;">'
+    + '<p style="color:#3fb950;font-weight:bold;">購入準備リクエストを受け付けました</p>'
+    + '<ul style="margin-top:8px;padding-left:20px;font-size:0.9em;">'
+    + '<li>買付証明書（指値400万）</li>'
+    + '<li>傾き・雨漏り対応業者リスト</li>'
+    + '<li>土地転売シナリオ計画書</li>'
+    + '</ul>'
+    + (input ? '<p style="color:#8b949e;font-size:0.85em;margin-top:12px;">追加: ' + input.replace(/\n/g, '<br>') + '</p>' : '')
+    + '</div>';
+}
+function confirmSkip() {
+  const result = document.getElementById('skipResult');
+  result.innerHTML = '<div style="background:#0d1117;border:1px solid #da3633;border-radius:6px;padding:15px;margin-top:10px;">'
+    + '<p style="color:#f85149;font-weight:bold;">FD-2026-004 を見送りにしました</p>'
+    + '</div>';
+}
+</script>
+
+</body>
+</html>
