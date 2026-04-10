@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FD-2026-002 - 不動産評価レポート</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', 'Hiragino Sans', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+  .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+  h1 { font-size: 1.4em; border-bottom: 2px solid #388bfd; padding-bottom: 10px; margin-bottom: 20px; }
+  h2 { font-size: 1.1em; color: #388bfd; margin: 25px 0 10px; border-left: 4px solid #388bfd; padding-left: 10px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; }
+  .badge-hold { background: #9e6a03; }
+  .badge-caution { background: #da3633; }
+  .score-big { font-size: 2.5em; font-weight: bold; text-align: center; margin: 15px 0; }
+  .score-big .num { color: #f85149; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #21262d; font-size: 0.9em; }
+  th { color: #8b949e; font-weight: normal; width: 35%; }
+  .risk-high { color: #f85149; }
+  .risk-mid { color: #f0883e; }
+  .risk-low { color: #3fb950; }
+  .flow-box { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; margin: 10px 0; font-family: monospace; font-size: 0.85em; white-space: pre-line; }
+  .score-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 0.85em; }
+  .score-label { width: 140px; color: #8b949e; text-align: right; }
+  .score-bar { flex: 1; background: #21262d; border-radius: 4px; height: 18px; position: relative; }
+  .score-fill { height: 100%; border-radius: 4px; }
+  .score-val { width: 50px; text-align: right; }
+  .photo-item { padding: 6px 0; border-bottom: 1px solid #21262d; font-size: 0.9em; }
+  .action-box { background: #0d419d; border-radius: 8px; padding: 15px; margin: 10px 0; }
+  .action-box ol { padding-left: 20px; }
+  .action-box li { margin: 5px 0; }
+  .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; }
+  .card-title { color: #8b949e; font-size: 0.8em; margin-bottom: 5px; }
+  .card-value { font-size: 1.3em; font-weight: bold; }
+  .card-value.positive { color: #3fb950; }
+  .card-value.negative { color: #f85149; }
+  .card-value.neutral { color: #f0883e; }
+  .timeline { position: relative; padding-left: 20px; margin: 15px 0; }
+  .timeline::before { content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: #30363d; }
+  .timeline-item { position: relative; margin: 12px 0; font-size: 0.85em; }
+  .timeline-item::before { content: ''; position: absolute; left: -17px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: #30363d; }
+  .timeline-item.highlight::before { background: #388bfd; }
+  .footer { text-align: center; color: #484f58; font-size: 0.75em; margin-top: 40px; padding-top: 20px; border-top: 1px solid #21262d; }
+
+  /* ボタンエリア */
+  .decision-area { text-align: center; margin: 35px 0; padding: 25px; background: #161b22; border: 1px solid #30363d; border-radius: 12px; }
+  .decision-area h2 { border: none; text-align: center; margin-bottom: 20px; padding: 0; }
+  .decision-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+  .btn { padding: 14px 32px; border: none; border-radius: 8px; font-size: 1em; font-weight: bold; cursor: pointer; transition: all 0.2s; min-width: 160px; }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+  .btn-interest { background: #1f6feb; color: #fff; }
+  .btn-interest:hover { background: #388bfd; }
+  .btn-buy { background: #238636; color: #fff; }
+  .btn-buy:hover { background: #2ea043; }
+  .btn-skip { background: #21262d; color: #8b949e; border: 1px solid #30363d; }
+  .btn-skip:hover { background: #30363d; color: #e6edf3; }
+
+  /* 追加分析パネル */
+  .panel { display: none; margin-top: 20px; text-align: left; }
+  .panel.active { display: block; }
+  .panel-interest { background: #0c2d6b; border: 1px solid #1f6feb; border-radius: 8px; padding: 20px; }
+  .panel-buy { background: #0d2818; border: 1px solid #238636; border-radius: 8px; padding: 20px; }
+  .panel-skip { background: #1c1212; border: 1px solid #da3633; border-radius: 8px; padding: 20px; text-align: center; }
+  .panel h3 { margin-bottom: 12px; }
+  .panel textarea { width: 100%; height: 100px; background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 12px; font-size: 0.9em; resize: vertical; font-family: inherit; }
+  .panel textarea:focus { outline: none; border-color: #388bfd; }
+  .panel textarea::placeholder { color: #484f58; }
+  .btn-submit { margin-top: 12px; padding: 10px 24px; background: #1f6feb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; }
+  .btn-submit:hover { background: #388bfd; }
+  .checklist { list-style: none; padding: 0; }
+  .checklist li { padding: 8px 0; border-bottom: 1px solid #21262d; display: flex; align-items: center; gap: 8px; }
+  .checklist li::before { content: '\2610'; font-size: 1.1em; }
+  .btn-back { margin-top: 15px; padding: 8px 20px; background: transparent; color: #8b949e; border: 1px solid #30363d; border-radius: 6px; cursor: pointer; font-size: 0.85em; }
+  .btn-back:hover { color: #e6edf3; border-color: #8b949e; }
+
+  /* 代替用途カード */
+  .alt-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 10px 0; }
+  .alt-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px; text-align: center; }
+  .alt-card .alt-title { font-size: 0.85em; color: #388bfd; font-weight: bold; margin-bottom: 5px; }
+  .alt-card .alt-desc { font-size: 0.75em; color: #8b949e; }
+
+  /* リスク警告 */
+  .risk-banner { background: #3d1a1a; border: 1px solid #f85149; border-radius: 8px; padding: 15px; margin: 15px 0; }
+  .risk-banner .risk-title { color: #f85149; font-weight: bold; margin-bottom: 8px; }
+  .risk-banner ul { padding-left: 20px; font-size: 0.85em; }
+  .risk-banner li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>FD-2026-002｜群馬県 高崎市 倉渕町岩氷885-43</h1>
+
+<table>
+  <tr><th>価格</th><td>298万円（大幅指値OK）</td></tr>
+  <tr><th>構造</th><td>木造中古戸建て｜平成8年（1996年）築｜約30年</td></tr>
+  <tr><th>用途地域</th><td>都市計画区域外（用途地域指定なし）</td></tr>
+  <tr><th>最寄駅</th><td>JR上越線 群馬八幡駅 車約30分（公共交通不便）</td></tr>
+  <tr><th>ライフライン</th><td>上水: 公共上水 / 下水: 浄化槽 / ガス: プロパン</td></tr>
+  <tr><th>告知事項</th><td>なし</td></tr>
+  <tr><th>仲介手数料</th><td>あり（約15.3万円）</td></tr>
+  <tr><th>内見</th><td>6月以降</td></tr>
+  <tr><th>資料</th><td><a href="https://drive.google.com/drive/folders/" style="color:#388bfd;" target="_blank">Google Drive で確認</a></td></tr>
+</table>
+
+<!-- リスク警告 -->
+<div class="risk-banner">
+  <div class="risk-title">最大リスク: 賃貸需要が極めて低いエリア</div>
+  <ul>
+    <li>倉渕町は高崎市中心部から車30分以上の山間部・農村エリア</li>
+    <li>周辺に賃貸物件がほぼなく、入居者確保が非常に困難</li>
+    <li>高崎市平均地価8.4万/m2に対し、倉渕町は推定1〜2万/m2</li>
+    <li>人口減少が進む地域で、将来的な需要増は期待できない</li>
+  </ul>
+</div>
+
+<h2>スコア</h2>
+<div class="score-big"><span class="num">28</span>/100 <span class="badge badge-caution">✕ 見送り推奨</span></div>
+
+<div style="margin:15px 0;">
+  <div class="score-row">
+    <span class="score-label">価格妥当性</span>
+    <div class="score-bar"><div class="score-fill" style="width:65%;background:#f0883e;"></div></div>
+    <span class="score-val">13/20</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">利回り</span>
+    <div class="score-bar"><div class="score-fill" style="width:15%;background:#f85149;"></div></div>
+    <span class="score-val">3/20</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">立地</span>
+    <div class="score-bar"><div class="score-fill" style="width:13%;background:#f85149;"></div></div>
+    <span class="score-val">2/15</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">建物状態</span>
+    <div class="score-bar"><div class="score-fill" style="width:47%;background:#f0883e;"></div></div>
+    <span class="score-val">7/15</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">土地ポテンシャル</span>
+    <div class="score-bar"><div class="score-fill" style="width:10%;background:#f85149;"></div></div>
+    <span class="score-val">1/10</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">リスク</span>
+    <div class="score-bar"><div class="score-fill" style="width:10%;background:#f85149;"></div></div>
+    <span class="score-val">1/10</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">出口戦略</span>
+    <div class="score-bar"><div class="score-fill" style="width:10%;background:#f85149;"></div></div>
+    <span class="score-val">1/10</span>
+  </div>
+</div>
+
+<h2>スコア解説</h2>
+<table>
+  <tr><th>価格妥当性 13/20</th><td>298万は山間部の築30年としてはやや高め。大幅指値OKで150万以下なら妥当</td></tr>
+  <tr><th>利回り 3/20</th><td class="risk-high">賃貸需要がほぼないため、安定した家賃収入が見込めない。仮に貸せても月2〜3万が限界</td></tr>
+  <tr><th>立地 2/15</th><td class="risk-high">車30分の山間部。スーパー・病院・学校が遠く、生活利便性が極めて低い</td></tr>
+  <tr><th>建物状態 7/15</th><td class="risk-mid">平成8年築で比較的新しい。内見前のため正確な状態は不明だが、築30年なりの劣化は想定</td></tr>
+  <tr><th>土地ポテンシャル 1/10</th><td class="risk-high">地価が極めて低く、値上がり余地なし。都市計画区域外で開発可能性もない</td></tr>
+  <tr><th>リスク 1/10</th><td class="risk-high">空室リスクが最大。買い手も見つかりにくく、出口が極めて限定的</td></tr>
+  <tr><th>出口戦略 1/10</th><td class="risk-high">売却困難。賃貸収入も見込めず、投資資金の回収が非常に困難</td></tr>
+</table>
+
+<h2>建物状態（推定 - 内見前）</h2>
+<div class="photo-item"><span class="risk-mid">&#x1F7E1;</span> 築30年 -- 外壁・屋根の経年劣化は一定程度あると想定</div>
+<div class="photo-item"><span class="risk-mid">&#x1F7E1;</span> 浄化槽 -- 維持管理状態が不明。法定検査の履歴確認が必要</div>
+<div class="photo-item"><span class="risk-mid">&#x1F7E1;</span> 水回り -- 築30年で交換時期。キッチン・浴室・トイレの状態確認要</div>
+<div class="photo-item"><span class="risk-low">&#x1F7E2;</span> 構造 -- 平成8年築は新耐震基準後。構造的には問題ない可能性</div>
+<div class="photo-item"><span class="risk-mid">&#x1F7E1;</span> 山間部特有 -- 湿気・カビ・害虫のリスクが平地より高い</div>
+<div class="photo-item"><span style="color:#8b949e;">&#x26AA;</span> ※内見6月以降 -- 現地確認まで正確な判定不可</div>
+
+<h2>リフォーム見積もり（推定）</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="card-title">DIY併用（推奨）</div>
+    <div class="card-value neutral">80〜150万</div>
+    <div style="font-size:0.75em;color:#8b949e;">水回り業者+内装DIY</div>
+  </div>
+  <div class="card">
+    <div class="card-title">業者丸投げ</div>
+    <div class="card-value negative">200〜350万</div>
+    <div style="font-size:0.75em;color:#8b949e;">物件価格を超える可能性</div>
+  </div>
+</div>
+<table>
+  <tr><th>水回り（キッチン・浴室・トイレ）</th><td style="text-align:right;">50〜120万</td></tr>
+  <tr><th>内装（クロス・床）DIY</th><td style="text-align:right;">10〜20万（材料費）</td></tr>
+  <tr><th>外壁補修</th><td style="text-align:right;">10〜30万</td></tr>
+  <tr><th>屋根補修</th><td style="text-align:right;">10〜30万</td></tr>
+  <tr><th>浄化槽点検・清掃</th><td style="text-align:right;">3〜5万</td></tr>
+  <tr><th>その他（電気・建具等）</th><td style="text-align:right;">5〜15万</td></tr>
+</table>
+
+<h2>初期投資 内訳（150万指値の場合）</h2>
+<table>
+  <tr><th>物件価格（指値）</th><td style="text-align:right;">150.0万</td></tr>
+  <tr><th>仲介手数料</th><td style="text-align:right;">9.7万 <span style="color:#8b949e;font-size:0.8em;">※150万×5%+消費税</span></td></tr>
+  <tr><th>登録免許税（土地）</th><td style="text-align:right;">約1.5万 <span style="color:#8b949e;font-size:0.8em;">※評価額推定100万×1.5%</span></td></tr>
+  <tr><th>登録免許税（建物）</th><td style="text-align:right;">約1.0万 <span style="color:#8b949e;font-size:0.8em;">※評価額推定50万×2%</span></td></tr>
+  <tr><th>司法書士報酬</th><td style="text-align:right;">約8万</td></tr>
+  <tr><th>不動産取得税</th><td style="text-align:right;">約3万 <span style="color:#8b949e;font-size:0.8em;">※後日請求（3〜6ヶ月後）</span></td></tr>
+  <tr><th>印紙税</th><td style="text-align:right;">0.1万</td></tr>
+  <tr><th>固定資産税精算金</th><td style="text-align:right;">約1万 <span style="color:#8b949e;font-size:0.8em;">※引渡し日で日割り</span></td></tr>
+  <tr><th>火災保険（初年度）</th><td style="text-align:right;">約2万</td></tr>
+  <tr style="border-top:2px solid #388bfd;"><th>購入諸費用 小計</th><td style="text-align:right;font-weight:bold;">約26.3万</td></tr>
+  <tr><th>リフォーム費用（DIY併用）</th><td style="text-align:right;">100万</td></tr>
+  <tr style="border-top:2px solid #e6edf3;"><th style="font-weight:bold;color:#e6edf3;">総投資額</th><td style="text-align:right;font-weight:bold;font-size:1.2em;color:#f0883e;">276.3万</td></tr>
+</table>
+
+<h2>収支サマリー（通常賃貸の場合）</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="card-title">総投資額</div>
+    <div class="card-value">276万</div>
+    <div style="font-size:0.75em;color:#8b949e;">物件150+諸費用26+リフォーム100</div>
+  </div>
+  <div class="card">
+    <div class="card-title">想定賃料</div>
+    <div class="card-value negative">2.5万/月</div>
+    <div style="font-size:0.75em;color:#8b949e;">年間30万（入居者が見つかれば）</div>
+  </div>
+  <div class="card">
+    <div class="card-title">年間ネットCF</div>
+    <div class="card-value negative">+8万/年</div>
+    <div style="font-size:0.75em;color:#8b949e;">月0.7万（税・保険・浄化槽控除後）</div>
+  </div>
+  <div class="card">
+    <div class="card-title">実質利回り</div>
+    <div class="card-value negative">2.9%</div>
+    <div style="font-size:0.75em;color:#8b949e;">目標15%に対して大幅不足</div>
+  </div>
+</div>
+
+<h2>年間経費の内訳</h2>
+<table>
+  <tr><th>固定資産税</th><td style="text-align:right;">約3万/年</td></tr>
+  <tr><th>火災保険</th><td style="text-align:right;">約2万/年</td></tr>
+  <tr><th>浄化槽維持管理</th><td style="text-align:right;">約4万/年 <span style="color:#8b949e;font-size:0.8em;">※法定検査+清掃+保守点検</span></td></tr>
+  <tr><th>修繕積立</th><td style="text-align:right;">約3万/年</td></tr>
+  <tr><th>管理費（自主管理）</th><td style="text-align:right;">0万</td></tr>
+  <tr><th>空室損（50%想定）</th><td style="text-align:right;">▲15万/年 <span style="color:#f85149;font-size:0.8em;">※このエリアでは空室率50%以上を想定</span></td></tr>
+  <tr style="border-top:2px solid #388bfd;"><th>年間経費合計</th><td style="text-align:right;font-weight:bold;">約27万/年</td></tr>
+</table>
+
+<h2>融資</h2>
+<table>
+  <tr><th>融資難易度</th><td class="risk-mid">△ やや難（山間部・低担保価値）</td></tr>
+  <tr><th>担保評価</th><td>土地の担保価値が非常に低い。建物も築30年で評価わずか</td></tr>
+  <tr><th>推奨</th><td>現金買い一択。150万なら現金で対応可能な範囲</td></tr>
+</table>
+
+<h2>10年保有キャッシュフロー（通常賃貸）</h2>
+<div class="flow-box">初期投資:      -276万
+10年累計CF:    +80万 <span style="color:#f85149;">（空室50%想定）</span>
+売却(10年後):  +50万 <span style="color:#8b949e;">（山間部のため買い手限定）</span>
+譲渡税:         0万
+仲介手数料:    -5万
+━━━━━━━━━━━━━━
+最終手残り:    +125万
+<span style="color:#f85149;font-weight:bold;">最終損失:     -151万</span></div>
+
+<h2>投資回収タイムライン（通常賃貸）</h2>
+<div class="timeline">
+  <div class="timeline-item">0年 -- 投資 ▲276万</div>
+  <div class="timeline-item">3年 -- 回収24万（9%）</div>
+  <div class="timeline-item">5年 -- 回収40万（14%）</div>
+  <div class="timeline-item">10年 -- 回収80万（29%）</div>
+  <div class="timeline-item">20年 -- 回収160万（58%）</div>
+  <div class="timeline-item highlight">35年 -- 回収280万（100%）ようやく回収 <span class="risk-high">※非現実的</span></div>
+</div>
+
+<h2>代替用途の検討</h2>
+<p style="color:#8b949e;font-size:0.85em;margin-bottom:10px;">賃貸が厳しいため、別の活用方法を検討</p>
+<div class="alt-grid">
+  <div class="alt-card">
+    <div class="alt-title">別荘・セカンドハウス</div>
+    <div class="alt-desc">自然豊かな立地を活かす。ただし投資回収は不可</div>
+  </div>
+  <div class="alt-card">
+    <div class="alt-title">民泊（Airbnb）</div>
+    <div class="alt-desc">観光需要次第。倉渕温泉等が近ければ可能性あり。運営の手間大</div>
+  </div>
+  <div class="alt-card">
+    <div class="alt-title">倉庫・資材置場</div>
+    <div class="alt-desc">近隣業者に月1〜2万で貸出。低収益だが安定</div>
+  </div>
+</div>
+<table>
+  <tr><th>別荘として売却</th><td>リフォーム後に200〜250万で売却。差額で小幅な利益の可能性</td></tr>
+  <tr><th>民泊</th><td>1泊5,000〜8,000円 × 稼働率30% = 月4.5〜7.2万。運営コスト・許認可のハードルあり</td></tr>
+  <tr><th>倉庫利用</th><td>月1〜2万。年12〜24万。低いが確実</td></tr>
+  <tr><th>太陽光パネル</th><td>都市計画区域外で制限緩い。ただし初期投資がさらに必要</td></tr>
+</table>
+
+<h2>出口戦略</h2>
+<table>
+  <tr><th>最推奨</th><td><strong class="risk-high">見送り</strong>（投資対象として不適格）</td></tr>
+  <tr><th>次善策</th><td>100万以下で指値 → リフォーム50万 → 別荘としてフリップ（200万売却目標）</td></tr>
+  <tr><th>保有の場合</th><td>民泊運営で月5万を目指す（年60万）→ 5年で投資回収</td></tr>
+  <tr><th>最悪シナリオ</th><td>買い手なし・借り手なし → 固定資産税と浄化槽費用の垂れ流し（年7万の持ち出し）</td></tr>
+</table>
+
+<h2>保有年数別シミュレーション</h2>
+<table>
+  <tr style="border-bottom:2px solid #388bfd;"><th>シナリオ</th><td style="text-align:center;font-weight:bold;">3年後</td><td style="text-align:center;font-weight:bold;">5年後</td><td style="text-align:center;font-weight:bold;">10年後</td></tr>
+  <tr><th>通常賃貸<br><span style="color:#8b949e;font-size:0.8em;">月2.5万・空室50%</span></th>
+    <td style="text-align:center;" class="risk-high">▲252万</td>
+    <td style="text-align:center;" class="risk-high">▲236万</td>
+    <td style="text-align:center;" class="risk-high">▲151万</td></tr>
+  <tr><th>民泊運営<br><span style="color:#8b949e;font-size:0.8em;">月5万・経費月2万</span></th>
+    <td style="text-align:center;" class="risk-mid">▲168万</td>
+    <td style="text-align:center;" class="risk-mid">▲96万</td>
+    <td style="text-align:center;" class="risk-low">+54万</td></tr>
+  <tr><th>フリップ（転売）<br><span style="color:#8b949e;font-size:0.8em;">リフォーム後即売却</span></th>
+    <td style="text-align:center;" class="risk-mid" colspan="3">投資200万 → 売却200万 = ほぼトントン（労力損）</td></tr>
+</table>
+
+<h2>指値提案</h2>
+<table>
+  <tr><th>推奨指値</th><td style="font-weight:bold;font-size:1.1em;color:#3fb950;">100万円（▲198万・67%OFF）</td></tr>
+  <tr><th>妥協ライン</th><td style="font-weight:bold;">150万円（▲148万・50%OFF）</td></tr>
+  <tr><th>撤退ライン</th><td style="font-weight:bold;color:#f85149;">150万円超 → 撤退</td></tr>
+  <tr><th>根拠1</th><td>倉渕町の推定地価1〜2万/m2。土地だけなら数十万の価値しかない</td></tr>
+  <tr><th>根拠2</th><td>賃貸需要がほぼゼロ。収益物件として成立しない立地</td></tr>
+  <tr><th>根拠3</th><td>リフォーム費用80〜150万が追加で必要。総投資額を抑える必要</td></tr>
+  <tr><th>根拠4</th><td>山間部で買い手が極めて限定的。売主も長期売れ残りを懸念しているはず</td></tr>
+  <tr><th>交渉カード</th><td>現金買い・即決・瑕疵承知・契約不適合免責OK・「大幅指値OK」の言質あり</td></tr>
+</table>
+
+<h2>推奨アクション</h2>
+<div class="action-box">
+<ol>
+  <li><strong style="color:#f85149;">基本は見送り推奨</strong> -- 賃貸投資としてはリスクが高すぎる</li>
+  <li>民泊・別荘転売に興味があるなら → まず6月に内見で建物状態を確認</li>
+  <li>内見で状態良好なら → <strong>100万で指値</strong>（現金買い・即決を武器に）</li>
+  <li>150万超なら即撤退。赤字物件になるリスクが高い</li>
+  <li>購入するなら民泊許認可の事前調査を並行して進める</li>
+</ol>
+</div>
+
+<!-- 判断ボタンエリア -->
+<div class="decision-area" id="decisionArea">
+  <h2>この物件どうする?</h2>
+  <div class="decision-buttons" id="decisionButtons">
+    <button class="btn btn-interest" onclick="showPanel('interest')">興味ある</button>
+    <button class="btn btn-buy" onclick="showPanel('buy')">購入したい</button>
+    <button class="btn btn-skip" onclick="showPanel('skip')">要らない</button>
+  </div>
+
+  <!-- 興味あるパネル -->
+  <div class="panel panel-interest" id="panel-interest">
+    <h3>どの部分を詳しく知りたいですか?</h3>
+    <textarea id="interestInput" placeholder="例:&#10;・倉渕町の民泊需要と許認可について&#10;・近隣の観光資源（温泉・キャンプ場等）&#10;・別荘としての売却相場&#10;・浄化槽の維持コスト詳細&#10;・太陽光パネル設置の収支シミュレーション&#10;・建物の固定資産税評価額の正確な金額"></textarea>
+    <button class="btn-submit" onclick="submitInterest()">追加分析を依頼する</button>
+    <button class="btn-back" onclick="resetPanel()">戻る</button>
+    <div id="interestResult" style="margin-top:15px;"></div>
+  </div>
+
+  <!-- 購入したいパネル -->
+  <div class="panel panel-buy" id="panel-buy">
+    <h3>購入に向けて準備するもの</h3>
+    <ul class="checklist">
+      <li>買付証明書の作成（指値100万で作成）</li>
+      <li>民泊許認可の事前調査（高崎市）</li>
+      <li>浄化槽の法定検査履歴の確認</li>
+      <li>リフォーム計画書（DIY/業者の振り分け）</li>
+      <li>現地確認チェックリスト（6月内見用）</li>
+    </ul>
+    <textarea id="buyInput" placeholder="追加でほしいもの・変更したい条件があれば入力&#10;例：指値を120万にしたい、民泊の収支をもっと詳しく"></textarea>
+    <button class="btn-submit" onclick="submitBuy()">購入準備を開始する</button>
+    <button class="btn-back" onclick="resetPanel()">戻る</button>
+    <div id="buyResult" style="margin-top:15px;"></div>
+  </div>
+
+  <!-- 要らないパネル -->
+  <div class="panel panel-skip" id="panel-skip">
+    <p style="font-size:1.2em;margin-bottom:10px;">この物件を見送りますか?</p>
+    <p style="color:#8b949e;margin-bottom:15px;">台帳のステータスが「見送り」に更新されます</p>
+    <button class="btn" style="background:#da3633;color:#fff;" onclick="confirmSkip()">見送り確定</button>
+    <button class="btn-back" onclick="resetPanel()">やっぱり戻る</button>
+    <div id="skipResult" style="margin-top:15px;"></div>
+  </div>
+</div>
+
+<div class="footer">CCカンパニー 不動産部門｜生成日: 2026-04-10</div>
+
+</div>
+
+<script>
+function showPanel(type) {
+  document.getElementById('decisionButtons').style.display = 'none';
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + type).classList.add('active');
+}
+
+function resetPanel() {
+  document.getElementById('decisionButtons').style.display = 'flex';
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+}
+
+function submitInterest() {
+  const input = document.getElementById('interestInput').value;
+  if (!input.trim()) { alert('知りたい内容を入力してください'); return; }
+
+  const result = document.getElementById('interestResult');
+  result.innerHTML = '<div style="background:#0d1117;border:1px solid #1f6feb;border-radius:6px;padding:15px;margin-top:10px;">'
+    + '<p style="color:#3fb950;font-weight:bold;">追加分析リクエストを受け付けました</p>'
+    + '<p style="color:#8b949e;font-size:0.85em;margin-top:8px;">リクエスト内容:</p>'
+    + '<p style="margin-top:5px;">' + input.replace(/\n/g, '<br>') + '</p>'
+    + '<p style="color:#8b949e;font-size:0.85em;margin-top:12px;">※ VPS構築後、Discord Botが自動で追加分析を実行してレポートを更新します</p>'
+    + '</div>';
+}
+
+function submitBuy() {
+  const input = document.getElementById('buyInput').value;
+  const result = document.getElementById('buyResult');
+  result.innerHTML = '<div style="background:#0d1117;border:1px solid #238636;border-radius:6px;padding:15px;margin-top:10px;">'
+    + '<p style="color:#3fb950;font-weight:bold;">購入準備リクエストを受け付けました</p>'
+    + '<p style="color:#8b949e;font-size:0.85em;margin-top:8px;">以下の書類を生成します:</p>'
+    + '<ul style="margin-top:8px;padding-left:20px;font-size:0.9em;">'
+    + '<li>買付証明書（指値100万）</li>'
+    + '<li>民泊許認可の事前調査レポート</li>'
+    + '<li>リフォーム計画書</li>'
+    + '<li>現地確認チェックリスト</li>'
+    + '</ul>'
+    + (input ? '<p style="color:#8b949e;font-size:0.85em;margin-top:12px;">追加リクエスト: ' + input.replace(/\n/g, '<br>') + '</p>' : '')
+    + '<p style="color:#8b949e;font-size:0.85em;margin-top:12px;">※ VPS構築後、自動で書類を生成してDiscordに通知します</p>'
+    + '</div>';
+}
+
+function confirmSkip() {
+  const result = document.getElementById('skipResult');
+  result.innerHTML = '<div style="background:#0d1117;border:1px solid #da3633;border-radius:6px;padding:15px;margin-top:10px;">'
+    + '<p style="color:#f85149;font-weight:bold;">FD-2026-002 を見送りにしました</p>'
+    + '<p style="color:#8b949e;font-size:0.85em;margin-top:8px;">台帳ステータス: 見送り</p>'
+    + '</div>';
+}
+</script>
+
+</body>
+</html>
