@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FD-2026-015 - 不動産評価レポート</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', 'Hiragino Sans', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+  .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+  h1 { font-size: 1.4em; border-bottom: 2px solid #388bfd; padding-bottom: 10px; margin-bottom: 20px; }
+  h2 { font-size: 1.1em; color: #388bfd; margin: 25px 0 10px; border-left: 4px solid #388bfd; padding-left: 10px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; }
+  .badge-buy { background: #238636; }
+  .badge-hold { background: #9e6a03; }
+  .badge-skip { background: #da3633; }
+  .score-big { font-size: 2.5em; font-weight: bold; text-align: center; margin: 15px 0; }
+  .score-big .num { color: #f0883e; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #21262d; font-size: 0.9em; }
+  th { color: #8b949e; font-weight: normal; width: 35%; }
+  .risk-high { color: #f85149; }
+  .risk-mid { color: #f0883e; }
+  .risk-low { color: #3fb950; }
+  .flow-box { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; margin: 10px 0; font-family: monospace; font-size: 0.85em; white-space: pre-line; }
+  .score-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 0.85em; }
+  .score-label { width: 140px; color: #8b949e; text-align: right; }
+  .score-bar { flex: 1; background: #21262d; border-radius: 4px; height: 18px; }
+  .score-fill { height: 100%; border-radius: 4px; }
+  .score-val { width: 50px; text-align: right; }
+  .photo-item { padding: 6px 0; border-bottom: 1px solid #21262d; font-size: 0.9em; }
+  .action-box { background: #0d419d; border-radius: 8px; padding: 15px; margin: 10px 0; }
+  .action-box ol { padding-left: 20px; }
+  .action-box li { margin: 5px 0; }
+  .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; }
+  .card-title { color: #8b949e; font-size: 0.8em; margin-bottom: 5px; }
+  .card-value { font-size: 1.3em; font-weight: bold; }
+  .card-value.positive { color: #3fb950; }
+  .card-value.negative { color: #f85149; }
+  .card-value.neutral { color: #f0883e; }
+  .timeline { position: relative; padding-left: 20px; margin: 15px 0; }
+  .timeline::before { content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: #30363d; }
+  .timeline-item { position: relative; margin: 12px 0; font-size: 0.85em; }
+  .timeline-item::before { content: ''; position: absolute; left: -17px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: #30363d; }
+  .timeline-item.highlight::before { background: #388bfd; }
+  .footer { text-align: center; color: #484f58; font-size: 0.75em; margin-top: 40px; padding-top: 20px; border-top: 1px solid #21262d; }
+  .decision-area { text-align: center; margin: 35px 0; padding: 25px; background: #161b22; border: 1px solid #30363d; border-radius: 12px; }
+  .decision-area h2 { border: none; text-align: center; margin-bottom: 20px; padding: 0; }
+  .decision-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+  .btn { padding: 14px 32px; border: none; border-radius: 8px; font-size: 1em; font-weight: bold; cursor: pointer; transition: all 0.2s; min-width: 160px; }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+  .btn-interest { background: #1f6feb; color: #fff; }
+  .btn-buy { background: #238636; color: #fff; }
+  .btn-skip { background: #21262d; color: #8b949e; border: 1px solid #30363d; }
+  .panel { display: none; margin-top: 20px; text-align: left; }
+  .panel.active { display: block; }
+  .panel-interest { background: #0c2d6b; border: 1px solid #1f6feb; border-radius: 8px; padding: 20px; }
+  .panel-buy { background: #0d2818; border: 1px solid #238636; border-radius: 8px; padding: 20px; }
+  .panel-skip { background: #1c1212; border: 1px solid #da3633; border-radius: 8px; padding: 20px; text-align: center; }
+  .panel h3 { margin-bottom: 12px; }
+  .panel textarea { width: 100%; height: 100px; background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 12px; font-size: 0.9em; resize: vertical; font-family: inherit; }
+  .btn-submit { margin-top: 12px; padding: 10px 24px; background: #1f6feb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; }
+  .checklist { list-style: none; padding: 0; }
+  .checklist li { padding: 8px 0; border-bottom: 1px solid #21262d; display: flex; align-items: center; gap: 8px; }
+  .checklist li::before { content: '\2610'; font-size: 1.1em; }
+  .btn-back { margin-top: 15px; padding: 8px 20px; background: transparent; color: #8b949e; border: 1px solid #30363d; border-radius: 6px; cursor: pointer; font-size: 0.85em; }
+  .highlight-box { background: #0d419d44; border: 1px solid #388bfd; border-radius: 8px; padding: 12px; margin: 10px 0; }
+  .warn-box { background: #3d2a0e; border: 1px solid #9e6a03; border-radius: 8px; padding: 12px; margin: 10px 0; font-size: 0.9em; }
+  .danger-box { background: #3d1212; border: 1px solid #da3633; border-radius: 8px; padding: 12px; margin: 10px 0; font-size: 0.9em; }
+  .links-box { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; margin: 15px 0; }
+  .links-box a { color: #58a6ff; text-decoration: none; display: block; padding: 4px 0; font-size: 0.9em; }
+  .links-box a:hover { text-decoration: underline; }
+  .map-frame { width: 100%; height: 320px; border: 1px solid #30363d; border-radius: 8px; margin: 10px 0; }
+  .photo-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0; }
+  .photo-grid img { width: 100%; height: 180px; object-fit: cover; border-radius: 6px; border: 1px solid #30363d; }
+  .photo-grid figure { margin: 0; }
+  .photo-grid figcaption { font-size: 0.75em; color: #8b949e; margin-top: 4px; }
+  .touhon-list a { color: #58a6ff; text-decoration: none; display: block; padding: 8px 10px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; margin: 6px 0; font-size: 0.9em; }
+  .touhon-list a:hover { background: #161b22; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>FD-2026-015｜千葉県 松戸市 西馬橋広手町（区分マンション・告知あり）</h1>
+
+<div class="danger-box">
+  <strong style="color:#f85149;">&#x26A0; 重要告知</strong>
+  <span style="font-size:0.85em;"> 当該住戸内で前所有者が孤独死（発見まで2〜3ヶ月）・心理的瑕疵あり／旧耐震／シロアリあり</span>
+</div>
+
+<div class="highlight-box">
+  <strong style="color:#f0883e;">💰 激安物件</strong>
+  <span style="font-size:0.85em;"> 148万円・馬橋駅徒歩13分・区分1K 31.12㎡・想定利回り30%以上（売主提示）</span>
+</div>
+
+<h2>地図</h2>
+<iframe class="map-frame" src="https://maps.google.com/maps?q=千葉県松戸市西馬橋広手町143&output=embed" loading="lazy"></iframe>
+
+<table>
+  <tr><th>価格</th><td>148万円（税込）</td></tr>
+  <tr><th>構造</th><td>区分マンション｜昭和49年11月5日築（<span class="risk-high">築52年・旧耐震</span>）</td></tr>
+  <tr><th>専有面積</th><td>登記簿 31.12㎡（9.41坪）｜1K相当</td></tr>
+  <tr><th>用途地域</th><td>第一種低層住居専用地域（建蔽率50%/容積率100%）</td></tr>
+  <tr><th>ライフライン</th><td>公営水道・公共下水・都市ガス・電力自由化</td></tr>
+  <tr><th>所在地</th><td>千葉県松戸市西馬橋広手町143</td></tr>
+  <tr><th>最寄駅</th><td>JR常磐線 馬橋駅 徒歩13分</td></tr>
+  <tr><th>江東区から</th><td>電車 約45〜60分（常磐線快速・千代田線乗入）</td></tr>
+  <tr><th>現況</th><td>空室（引渡時期：相談）</td></tr>
+  <tr><th class="risk-high">告知事項</th><td class="risk-high">前所有者孤独死・発見まで2〜3ヶ月（11月頃）</td></tr>
+  <tr><th>その他リスク</th><td class="risk-mid">境界非明示・シロアリあり・現況有姿・司法書士売主指定・リフォーム推奨</td></tr>
+</table>
+
+<h2>土地積算価格（区分所有持分）</h2>
+<table>
+  <tr><th>路線価</th><td>約 85,000 円/㎡ <span style="color:#8b949e;font-size:0.8em;">※西馬橋広手町エリア推定</span></td></tr>
+  <tr><th>専有面積</th><td>31.12 ㎡</td></tr>
+  <tr><th>建物積算（区分）</th><td>約 90 万円 <span style="color:#8b949e;font-size:0.8em;">※旧耐震RC・築52年 残価ほぼゼロ</span></td></tr>
+  <tr><th>土地持分積算</th><td>約 80〜120 万円 <span style="color:#8b949e;font-size:0.8em;">（敷地権割合推定）</span></td></tr>
+  <tr><th>合計積算</th><td>約 170〜210 万円</td></tr>
+  <tr><th>販売価格比較</th><td class="risk-low">▼ 販売148万は積算内。ただし告知・修繕積立金次第で評価激変</td></tr>
+</table>
+
+<h2>物件写真（Driveより10枚）</h2>
+<div class="photo-grid">
+  <figure><img src="https://drive.google.com/thumbnail?id=1Jbex8jsL0UFNlzRoqaRJHrakLdXMEfsi&sz=w1000" alt="写真1"><figcaption>IMG_3209</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=1gU3NeTIJf1OOi97GbVLNPZfdkGkLxhCP&sz=w1000" alt="写真2"><figcaption>IMG_3210</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=1q-cWHB6OkDD9USKZNFzRNeCqkkQMQWvS&sz=w1000" alt="写真3"><figcaption>IMG_3211</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=1eXUJHoeW8kZ1VJdR68R6i1nYUp35tjeC&sz=w1000" alt="写真4"><figcaption>IMG_3212</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=1IR9WVTc689gBTr8tk0QATzCieZPwdaoY&sz=w1000" alt="写真5"><figcaption>IMG_3213</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=12Sv_oIqG25q8YWioiToCpPbdn0OuDpqT&sz=w1000" alt="写真6"><figcaption>IMG_3214</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=1WoFsbP9li74SvpyjrV7UIv2aHrvMQHfl&sz=w1000" alt="写真7"><figcaption>IMG_3215</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=1U9rb-VDoYYZNqaK6qdz4nn9W82yBk94E&sz=w1000" alt="写真8"><figcaption>IMG_3216</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=1rNsdQ3udYdGIgdtJif7jsa3bhhCPwQYO&sz=w1000" alt="写真9"><figcaption>IMG_3217</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=19gOdwsYg09uCH_yJVe-BumuCGPAUnlZM&sz=w1000" alt="写真10"><figcaption>IMG_3218</figcaption></figure>
+</div>
+
+<h2>登記簿・公図・関連書類</h2>
+<p style="font-size:0.85em;color:#8b949e;">※PDFはGoogle Driveで開きます</p>
+<div class="touhon-list">
+  <a href="https://drive.google.com/file/d/1I2AVQL4krXg9k-Avv94OME40tGLH3wwG/view" target="_blank">📄 マンション第5 謄本・公図・測量図</a>
+  <a href="https://drive.google.com/file/d/1chDRB53YBD0L0MOU_I8H2hpFMJ5Nas9g/view" target="_blank">📄 物件概要書</a>
+  <a href="https://drive.google.com/file/d/1zjevMXD664VUhy5z0cmnQu4YxNvFP8Dc/view" target="_blank">📄 買付証明書テンプレ</a>
+</div>
+
+<h2>スコア</h2>
+<div class="score-big"><span class="num">42</span>/100 <span class="badge badge-hold">△ 保留（要情報）</span></div>
+
+<div style="margin:15px 0;">
+  <div class="score-row">
+    <span class="score-label">価格妥当性</span>
+    <div class="score-bar"><div class="score-fill" style="width:75%;background:#3fb950;"></div></div>
+    <span class="score-val">15/20</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">利回り</span>
+    <div class="score-bar"><div class="score-fill" style="width:70%;background:#3fb950;"></div></div>
+    <span class="score-val">14/20</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">立地</span>
+    <div class="score-bar"><div class="score-fill" style="width:60%;background:#f0883e;"></div></div>
+    <span class="score-val">9/15</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">建物状態</span>
+    <div class="score-bar"><div class="score-fill" style="width:20%;background:#f85149;"></div></div>
+    <span class="score-val">3/15</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">土地ポテンシャル</span>
+    <div class="score-bar"><div class="score-fill" style="width:10%;background:#f85149;"></div></div>
+    <span class="score-val">1/10</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">リスク</span>
+    <div class="score-bar"><div class="score-fill" style="width:0%;background:#f85149;"></div></div>
+    <span class="score-val">0/10</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">出口戦略</span>
+    <div class="score-bar"><div class="score-fill" style="width:0%;background:#f85149;"></div></div>
+    <span class="score-val">0/10</span>
+  </div>
+</div>
+
+<h2>物件判定</h2>
+<div class="photo-item"><span class="risk-low">&#x1F7E2;</span> 価格148万と都内アクセス可・駅徒歩13分で破格</div>
+<div class="photo-item"><span class="risk-low">&#x1F7E2;</span> 都市ガス・公共下水・公営水道 -- ライフライン問題なし</div>
+<div class="photo-item"><span class="risk-mid">&#x1F7E1;</span> 31㎡の1K・松戸市 -- 単身賃貸需要はあるが飽和気味</div>
+<div class="photo-item"><span class="risk-high">&#x1F534;</span> <strong>心理的瑕疵（孤独死2〜3ヶ月）</strong> -- 次賃借人への重要事項説明必須・賃料大幅減額要因</div>
+<div class="photo-item"><span class="risk-high">&#x1F534;</span> <strong>旧耐震（築52年）</strong> -- 住宅ローン不可・融資困難・出口狭い</div>
+<div class="photo-item"><span class="risk-high">&#x1F534;</span> <strong>シロアリあり</strong> -- 区分でのシロアリは構造躯体疑惑</div>
+<div class="photo-item"><span class="risk-high">&#x1F534;</span> <strong>管理費・修繕積立金 未記載</strong> -- 金額次第で収支崩壊。滞納有無も確認必須</div>
+<div class="photo-item"><span class="risk-high">&#x1F534;</span> 司法書士売主指定 -- 費用割高</div>
+<div class="photo-item"><span class="risk-mid">&#x1F7E1;</span> 境界非明示（区分マンションなので影響小）</div>
+
+<h2>周辺賃貸相場（松戸市西馬橋・馬橋駅エリア 1K）</h2>
+<table>
+  <tr><th>1K 20〜25㎡ 築古</th><td>3.5〜4.5万/月</td></tr>
+  <tr><th>1K 25〜30㎡ 築古</th><td>4.0〜5.0万/月</td></tr>
+  <tr><th>1DK 30〜35㎡ 築古</th><td>4.5〜5.5万/月</td></tr>
+  <tr><th>同条件リノベ済</th><td>5.5〜6.5万/月</td></tr>
+  <tr><th>本物件の通常相場</th><td>4.5〜5.0万/月（31㎡・築52年・駅徒歩13分）</td></tr>
+  <tr><th class="risk-high">告知補正後</th><td style="color:#f0883e;font-weight:bold;">3.0〜3.5万/月（心理的瑕疵で▼30〜40%）</td></tr>
+</table>
+
+<h2>リフォーム見積もり</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="card-title">最低限（特殊清掃後・原状回復）</div>
+    <div class="card-value neutral">80〜150万</div>
+    <div style="font-size:0.75em;color:#8b949e;">特殊清掃・クロス/床・水回り補修</div>
+  </div>
+  <div class="card">
+    <div class="card-title">フルリノベ（告知緩和狙い）</div>
+    <div class="card-value negative">200〜350万</div>
+    <div style="font-size:0.75em;color:#8b949e;">ユニットバス・キッチン・フローリング一新</div>
+  </div>
+</div>
+<div class="warn-box" style="margin-top:10px;">
+  ※特殊清掃費用は別途20〜50万。シロアリ駆除・点検5〜15万。管理組合へ確認必須
+</div>
+
+<h2>初期投資 内訳（最低限リフォーム想定）</h2>
+<table>
+  <tr><th>物件価格</th><td style="text-align:right;">148.0万</td></tr>
+  <tr><th>仲介手数料</th><td style="text-align:right;">約10万</td></tr>
+  <tr><th>登録免許税</th><td style="text-align:right;">約2万</td></tr>
+  <tr><th>司法書士報酬</th><td style="text-align:right;">約10万（売主指定）</td></tr>
+  <tr><th>不動産取得税</th><td style="text-align:right;">約2万</td></tr>
+  <tr><th>印紙税・火災保険</th><td style="text-align:right;">約3万</td></tr>
+  <tr><th>固都税精算金</th><td style="text-align:right;">約1万</td></tr>
+  <tr style="border-top:2px solid #388bfd;"><th>購入諸費用 小計</th><td style="text-align:right;font-weight:bold;">約28.0万</td></tr>
+  <tr><th>特殊清掃</th><td style="text-align:right;">30万</td></tr>
+  <tr><th>シロアリ駆除</th><td style="text-align:right;">10万</td></tr>
+  <tr><th>リフォーム</th><td style="text-align:right;">120万</td></tr>
+  <tr style="border-top:2px solid #e6edf3;"><th style="font-weight:bold;color:#e6edf3;">総投資額</th><td style="text-align:right;font-weight:bold;font-size:1.2em;color:#f0883e;">336.0万</td></tr>
+</table>
+<div class="warn-box">※管理費・修繕積立金の滞納額が判明したら上乗せ必須</div>
+
+<h2>収支サマリー（告知補正後）</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="card-title">総投資額</div>
+    <div class="card-value">336万</div>
+  </div>
+  <div class="card">
+    <div class="card-title">想定賃料（告知補正後）</div>
+    <div class="card-value">3.2万/月</div>
+    <div style="font-size:0.75em;color:#8b949e;">年間38.4万</div>
+  </div>
+  <div class="card">
+    <div class="card-title">年間ネットCF</div>
+    <div class="card-value positive">+20万/年</div>
+    <div style="font-size:0.75em;color:#8b949e;">管理費・修繕積立金・固都税・空室引当控除後（管理費3,000/月想定）</div>
+  </div>
+  <div class="card">
+    <div class="card-title">実質利回り</div>
+    <div class="card-value neutral">6.0%</div>
+    <div style="font-size:0.75em;color:#8b949e;">表面11.4% → 実質6.0%（総投資対比）</div>
+  </div>
+</div>
+
+<h2>活用ルート比較</h2>
+<div class="flow-box">           ルート①告知のまま賃貸   ルート②フルリノベ賃貸   ルート③転売
+初期投資:   336万                 510万                   148万
+年間収入:   38.4万                54万                    —
+年間CF:     20万                  28万                    —
+利回り:     6.0%                  5.5%                    —
+5年累計CF:  100万                 140万                   —
+売却益:     —                    —                       +30〜80万(即転売)
+最終手残り: +100万                +140万                  +30〜80万
+
+推奨: ルート①告知のまま賃貸（低投資で回す）
+ただし管理費・修繕積立金・滞納の全容判明まで買付は厳禁</div>
+
+<h2>10年保有キャッシュフロー（ルート①）</h2>
+<div class="flow-box">初期投資:      -336万
+10年累計CF:    +200万
+売却(10年後):  +50〜100万（築62年旧耐震・出口極狭）
+譲渡税:        -5万
+仲介手数料:    -5万
+━━━━━━━━━━━━━━
+最終手残り:    -96〜-41万
+<span style="color:#f85149;font-weight:bold;">最終利益:     -96〜-41万（元本回収困難リスク）</span></div>
+
+<h2>投資回収タイムライン</h2>
+<div class="timeline">
+  <div class="timeline-item">0年 -- 投資 -336万</div>
+  <div class="timeline-item">5年 -- 回収100万（30%）</div>
+  <div class="timeline-item">10年 -- 回収200万（60%）※売却困難なら未回収</div>
+  <div class="timeline-item highlight">15年 -- 取壊/建替リスク顕在化（築67年）</div>
+</div>
+
+<h2>融資</h2>
+<table>
+  <tr><th>融資難易度</th><td class="risk-high">× 極めて困難（旧耐震・築52年・区分・告知あり）</td></tr>
+  <tr><th>住宅ローン</th><td class="risk-high">× 不可（旧耐震は対象外が大半）</td></tr>
+  <tr><th>推奨金融機関</th><td>現金買い一択 / 唯一あるとすれば日本政策金融公庫（事業性）・三井住友トラストL&F</td></tr>
+  <tr><th>現金買い前提</th><td>総投資336万を自己資金で賄う想定</td></tr>
+</table>
+
+<h2>指値提案</h2>
+<table>
+  <tr><th>推奨指値</th><td style="font-weight:bold;font-size:1.1em;">80万円（-68万・46%OFF）</td></tr>
+  <tr><th>根拠(1)</th><td>心理的瑕疵（孤独死2〜3ヶ月）で賃料30〜40%減・取引価格も同水準減が相場</td></tr>
+  <tr><th>根拠(2)</th><td>旧耐震で融資不可・買主層が現金投資家に限定</td></tr>
+  <tr><th>根拠(3)</th><td>シロアリ・特殊清掃・修繕積立金滞納リスクを事前織込み</td></tr>
+  <tr><th>根拠(4)</th><td>築52年区分は10年後の出口ほぼ消滅</td></tr>
+  <tr><th>交渉カード</th><td>現金一括・現況有姿OK・司法書士指定承諾・短期決済</td></tr>
+  <tr><th>撤退ライン</th><td>100万超 or 修繕積立金滞納判明 or 大規模修繕計画不備</td></tr>
+</table>
+
+<h2>出口戦略</h2>
+<table>
+  <tr><th>最推奨</th><td><strong>短期保有3〜5年で賃貸回収→再販or放棄</strong></td></tr>
+  <tr><th>強み</th><td>低単価なので損切り額が小さい</td></tr>
+  <tr><th>弱み</th><td>旧耐震区分は出口ほぼなし。最悪は管理費だけ払い続ける塩漬け</td></tr>
+  <tr><th>代替案</th><td>自主管理解散・取壊決議リスク → 追加費用発生の可能性</td></tr>
+</table>
+
+<h2>購入前 必須確認事項（最重要）</h2>
+<div class="danger-box">
+  <ol style="padding-left:20px;">
+    <li><strong>管理費・修繕積立金の月額</strong>（未記載 → 2〜3万/月なら即撤退）</li>
+    <li><strong>修繕積立金滞納の有無・金額</strong>（買主承継）</li>
+    <li><strong>管理組合の財政状況・長期修繕計画</strong></li>
+    <li><strong>耐震診断・耐震補強工事の予定有無</strong></li>
+    <li><strong>大規模修繕履歴・次回予定</strong></li>
+    <li><strong>シロアリ被害の範囲</strong>（専有部のみ or 共用部躯体）</li>
+    <li><strong>特殊清掃完了の有無</strong>・告知義務の期間</li>
+    <li>総戸数・空室率・管理会社の質</li>
+  </ol>
+</div>
+
+<h2>推奨アクション</h2>
+<div class="action-box">
+<ol>
+  <li><strong>管理組合資料請求（重要事項調査報告書）</strong> - 修繕積立金滞納・月額・長期修繕計画を全数確認</li>
+  <li>特殊清掃実施状況の確認（済み/未済で方針が180度変わる）</li>
+  <li>現地確認（共用部の劣化・空室率・ポスト/メーター確認）</li>
+  <li>松戸市内の告知物件成約事例を収集（補正幅の根拠固め）</li>
+  <li>上記OKなら<strong>指値80万</strong>で買付。NGなら即撤退</li>
+  <li>再建築不可級の流動性リスクを踏まえ<strong>余剰資金の3%以内</strong>に投資規模を限定</li>
+</ol>
+</div>
+
+<h2>📂 詳細資料（Google Drive）</h2>
+<div class="links-box">
+  <a href="https://drive.google.com/drive/folders/1cZfpBbouAEARPpT-x9JeqZYKjl-y4Bz3" target="_blank">📂 Google Drive フォルダ全体を開く（全写真・書類）</a>
+  <a href="https://maps.app.goo.gl/?q=千葉県松戸市西馬橋広手町143" target="_blank">📍 Google Maps（ストリートビュー等）</a>
+  <span style="color:#8b949e;font-size:0.85em;">※ 興味が出たら開いてください</span>
+</div>
+
+<div class="decision-area" id="decisionArea">
+  <h2>この物件どうする？</h2>
+  <div class="decision-buttons" id="decisionButtons">
+    <button class="btn btn-interest" onclick="showPanel('interest')">興味ある</button>
+    <button class="btn btn-buy" onclick="showPanel('buy')">購入したい</button>
+    <button class="btn btn-skip" onclick="showPanel('skip')">要らない</button>
+  </div>
+  <div class="panel panel-interest" id="panel-interest">
+    <h3>どの部分を詳しく知りたいですか？</h3>
+    <textarea id="interestInput" placeholder="例：&#10;・松戸市の告知物件成約事例&#10;・重要事項調査報告書の読み方&#10;・旧耐震区分の出口実例"></textarea>
+    <button class="btn-submit" onclick="submitInterest()">追加分析を依頼する</button>
+    <button class="btn-back" onclick="resetPanel()">戻る</button>
+    <div id="interestResult" style="margin-top:15px;"></div>
+  </div>
+  <div class="panel panel-buy" id="panel-buy">
+    <h3>購入前 必須チェック</h3>
+    <ul class="checklist">
+      <li>重要事項調査報告書（管理組合）取得</li>
+      <li>修繕積立金滞納・月額確認</li>
+      <li>特殊清掃完了確認</li>
+      <li>現地確認（共用部・空室率）</li>
+      <li>買付証明書（指値80万）</li>
+    </ul>
+    <textarea id="buyInput" placeholder="追加要望"></textarea>
+    <button class="btn-submit" onclick="submitBuy()">購入準備を開始する</button>
+    <button class="btn-back" onclick="resetPanel()">戻る</button>
+    <div id="buyResult" style="margin-top:15px;"></div>
+  </div>
+  <div class="panel panel-skip" id="panel-skip">
+    <p style="font-size:1.2em;margin-bottom:10px;">この物件を見送りますか？</p>
+    <button class="btn" style="background:#da3633;color:#fff;" onclick="confirmSkip()">見送り確定</button>
+    <button class="btn-back" onclick="resetPanel()">やっぱり戻る</button>
+    <div id="skipResult" style="margin-top:15px;"></div>
+  </div>
+</div>
+
+<div class="footer">CCカンパニー 不動産部門｜生成日: 2026-04-16</div>
+
+</div>
+
+<script>
+function showPanel(type) {
+  document.getElementById('decisionButtons').style.display = 'none';
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + type).classList.add('active');
+}
+function resetPanel() {
+  document.getElementById('decisionButtons').style.display = 'flex';
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+}
+function submitInterest() {
+  const input = document.getElementById('interestInput').value;
+  if (!input.trim()) { alert('知りたい内容を入力してください'); return; }
+  document.getElementById('interestResult').innerHTML = '<div style="background:#0d1117;border:1px solid #1f6feb;border-radius:6px;padding:15px;"><p style="color:#3fb950;font-weight:bold;">追加分析リクエストを受け付けました</p><p style="margin-top:5px;">' + input.replace(/\n/g, '<br>') + '</p></div>';
+}
+function submitBuy() {
+  document.getElementById('buyResult').innerHTML = '<div style="background:#0d1117;border:1px solid #238636;border-radius:6px;padding:15px;"><p style="color:#3fb950;font-weight:bold;">購入準備リクエストを受け付けました</p></div>';
+}
+function confirmSkip() {
+  document.getElementById('skipResult').innerHTML = '<div style="background:#0d1117;border:1px solid #da3633;border-radius:6px;padding:15px;"><p style="color:#f85149;font-weight:bold;">FD-2026-015 を見送りにしました</p></div>';
+}
+</script>
+
+</body>
+</html>
