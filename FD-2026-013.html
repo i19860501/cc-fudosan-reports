@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FD-2026-013 - 不動産評価レポート</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', 'Hiragino Sans', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+  .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+  h1 { font-size: 1.4em; border-bottom: 2px solid #388bfd; padding-bottom: 10px; margin-bottom: 20px; }
+  h2 { font-size: 1.1em; color: #388bfd; margin: 25px 0 10px; border-left: 4px solid #388bfd; padding-left: 10px; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; }
+  .badge-buy { background: #238636; }
+  .badge-hold { background: #9e6a03; }
+  .badge-skip { background: #da3633; }
+  .score-big { font-size: 2.5em; font-weight: bold; text-align: center; margin: 15px 0; }
+  .score-big .num { color: #f0883e; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #21262d; font-size: 0.9em; }
+  th { color: #8b949e; font-weight: normal; width: 35%; }
+  .risk-high { color: #f85149; }
+  .risk-mid { color: #f0883e; }
+  .risk-low { color: #3fb950; }
+  .flow-box { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; margin: 10px 0; font-family: monospace; font-size: 0.85em; white-space: pre-line; }
+  .score-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 0.85em; }
+  .score-label { width: 140px; color: #8b949e; text-align: right; }
+  .score-bar { flex: 1; background: #21262d; border-radius: 4px; height: 18px; }
+  .score-fill { height: 100%; border-radius: 4px; }
+  .score-val { width: 50px; text-align: right; }
+  .photo-item { padding: 6px 0; border-bottom: 1px solid #21262d; font-size: 0.9em; }
+  .action-box { background: #0d419d; border-radius: 8px; padding: 15px; margin: 10px 0; }
+  .action-box ol { padding-left: 20px; }
+  .action-box li { margin: 5px 0; }
+  .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; }
+  .card-title { color: #8b949e; font-size: 0.8em; margin-bottom: 5px; }
+  .card-value { font-size: 1.3em; font-weight: bold; }
+  .card-value.positive { color: #3fb950; }
+  .card-value.negative { color: #f85149; }
+  .card-value.neutral { color: #f0883e; }
+  .timeline { position: relative; padding-left: 20px; margin: 15px 0; }
+  .timeline::before { content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: #30363d; }
+  .timeline-item { position: relative; margin: 12px 0; font-size: 0.85em; }
+  .timeline-item::before { content: ''; position: absolute; left: -17px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: #30363d; }
+  .timeline-item.highlight::before { background: #388bfd; }
+  .footer { text-align: center; color: #484f58; font-size: 0.75em; margin-top: 40px; padding-top: 20px; border-top: 1px solid #21262d; }
+  .decision-area { text-align: center; margin: 35px 0; padding: 25px; background: #161b22; border: 1px solid #30363d; border-radius: 12px; }
+  .decision-area h2 { border: none; text-align: center; margin-bottom: 20px; padding: 0; }
+  .decision-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+  .btn { padding: 14px 32px; border: none; border-radius: 8px; font-size: 1em; font-weight: bold; cursor: pointer; transition: all 0.2s; min-width: 160px; }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+  .btn-interest { background: #1f6feb; color: #fff; }
+  .btn-buy { background: #238636; color: #fff; }
+  .btn-skip { background: #21262d; color: #8b949e; border: 1px solid #30363d; }
+  .panel { display: none; margin-top: 20px; text-align: left; }
+  .panel.active { display: block; }
+  .panel-interest { background: #0c2d6b; border: 1px solid #1f6feb; border-radius: 8px; padding: 20px; }
+  .panel-buy { background: #0d2818; border: 1px solid #238636; border-radius: 8px; padding: 20px; }
+  .panel-skip { background: #1c1212; border: 1px solid #da3633; border-radius: 8px; padding: 20px; text-align: center; }
+  .panel h3 { margin-bottom: 12px; }
+  .panel textarea { width: 100%; height: 100px; background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 12px; font-size: 0.9em; resize: vertical; font-family: inherit; }
+  .btn-submit { margin-top: 12px; padding: 10px 24px; background: #1f6feb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; }
+  .checklist { list-style: none; padding: 0; }
+  .checklist li { padding: 8px 0; border-bottom: 1px solid #21262d; display: flex; align-items: center; gap: 8px; }
+  .checklist li::before { content: '\2610'; font-size: 1.1em; }
+  .btn-back { margin-top: 15px; padding: 8px 20px; background: transparent; color: #8b949e; border: 1px solid #30363d; border-radius: 6px; cursor: pointer; font-size: 0.85em; }
+  .highlight-box { background: #0d419d44; border: 1px solid #388bfd; border-radius: 8px; padding: 12px; margin: 10px 0; }
+  .warn-box { background: #3d2a0e; border: 1px solid #9e6a03; border-radius: 8px; padding: 12px; margin: 10px 0; font-size: 0.9em; }
+  .links-box { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; margin: 15px 0; }
+  .links-box a { color: #58a6ff; text-decoration: none; display: block; padding: 4px 0; font-size: 0.9em; }
+  .links-box a:hover { text-decoration: underline; }
+  .map-frame { width: 100%; height: 320px; border: 1px solid #30363d; border-radius: 8px; margin: 10px 0; }
+  .photo-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0; }
+  .photo-grid img { width: 100%; height: 180px; object-fit: cover; border-radius: 6px; border: 1px solid #30363d; }
+  .photo-grid figure { margin: 0; }
+  .photo-grid figcaption { font-size: 0.75em; color: #8b949e; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>FD-2026-013｜神奈川県 横浜市青葉区 元石川町</h1>
+
+<div class="highlight-box">
+  <strong style="color:#388bfd;">&#x25B2; 条件付き検討</strong>
+  <span style="font-size:0.85em;"> 青葉区ブランド立地・1,480万。築54年で建物価値ゼロ前提、土地値で評価</span>
+</div>
+
+<h2>資料リンク</h2>
+<div class="links-box">
+  <a href="https://drive.google.com/drive/u/1/folders/1NiF5ZigMt8o0N4iqq0DZydlf5Tzx4Cmt" target="_blank">📂 Google Drive フォルダ（写真・公課証明書・法令・道路・ライフライン・ハザード）</a>
+  <a href="https://www.google.com/maps/search/?api=1&query=神奈川県横浜市青葉区元石川町6354-7" target="_blank">📍 Google Maps で見る</a>
+  <span style="color:#8b949e;font-size:0.85em;">※ マイソクリンクなし</span>
+</div>
+
+<div class="warn-box">
+  <strong>&#x26A0; 情報不足</strong> ：物件概要書・マイソクなし。公課証明書はスキャン画像でOCR不可。面積は推定150㎡で暫定評価。
+</div>
+
+<table>
+  <tr><th>価格</th><td>1,480万円（仲介手数料なし）</td></tr>
+  <tr><th>構造</th><td>木造2階建て想定｜昭和46年6月築（築54年・旧耐震）</td></tr>
+  <tr><th>土地</th><td class="risk-mid">約150㎡仮定（実面積要確認）</td></tr>
+  <tr><th>建物</th><td class="risk-mid">面積未記載（写真より2階建て戸建）</td></tr>
+  <tr><th>所在地</th><td>神奈川県横浜市青葉区元石川町6354-7</td></tr>
+  <tr><th>最寄駅</th><td>東急田園都市線 たまプラーザ／あざみ野（バス圏）</td></tr>
+  <tr><th>江東区から</th><td>車 約50〜70分（Aエリア/DIY可）</td></tr>
+  <tr><th>狭あい道路</th><td class="risk-mid">Drive資料に狭あい道路敷実測図あり → セットバック有りの可能性</td></tr>
+</table>
+
+<h2>土地積算価格</h2>
+<table>
+  <tr><th>路線価</th><td>約 180,000 円/㎡ <span style="color:#8b949e;font-size:0.8em;">※元石川町の推定水準</span></td></tr>
+  <tr><th>土地面積</th><td>150 ㎡（仮定）</td></tr>
+  <tr><th>積算価格</th><td>2,700 万円 <span style="color:#8b949e;font-size:0.8em;">（路線価×面積）</span></td></tr>
+  <tr><th>実勢価格推定</th><td>3,375 万円 <span style="color:#8b949e;font-size:0.8em;">（積算×1.25）</span></td></tr>
+  <tr><th>販売価格比較</th><td class="risk-low">✓ 積算超え（差額 +1,220万）</td></tr>
+  <tr><th>備考</th><td style="color:#8b949e;font-size:0.8em;">再建築可否はDriveの道路資料で確認要。狭あい道路ありでセットバック負担</td></tr>
+</table>
+
+<h2>地図</h2>
+<iframe class="map-frame" src="https://maps.google.com/maps?q=神奈川県横浜市青葉区元石川町6354-7&output=embed" loading="lazy"></iframe>
+
+<h2>物件写真（Driveより10枚）</h2>
+<div class="photo-grid">
+  <figure><img src="https://drive.google.com/thumbnail?id=1YmSEMfIqiEy_OkegU7Hx9M9KXgSTMLHp&sz=w1000" alt="現地外観1"><figcaption>現地外観1</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=1CORx6SqHyfH70HK4TaFh_eL1jkEdHw3n&sz=w1000" alt="現地外観5"><figcaption>現地外観5</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=1Qvc_VI7rMofm-SpSDoydY10CrudvJqQB&sz=w1000" alt="現地前面道路1"><figcaption>現地前面道路</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=12PbKOx3FEAPA0w0_byAAlT0zMLf_LP4v&sz=w1000" alt="現地裏1"><figcaption>現地裏1</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=1ZWWTMpGgipZwpAtvyUqWKmkpJrnVXAy1&sz=w1000" alt="1階リビング1"><figcaption>1階リビング1</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=1c4zPdiVYu6WJ5QWl1-Obn6PA_ABk2Qu5&sz=w1000" alt="1階リビング3"><figcaption>1階リビング3</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=1_ETKoPlrRH7efSyySUAn0B9nAtCTEdO5&sz=w1000" alt="2階洋室1"><figcaption>2階洋室1</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=1CuKdKb2VJ_7L8mmpTXTHUAYjjo8NqFb3&sz=w1000" alt="庭4"><figcaption>庭4</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=10TSUzKurGpgwLnkqp6gZgGrBdQHb2Btb&sz=w1000" alt="眺望1"><figcaption>眺望1</figcaption></figure>
+  <figure><img src="https://drive.google.com/thumbnail?id=13zFh8Vng6Y171OD_O8Pg-5pkuSFf_KZL&sz=w1000" alt="外水栓"><figcaption>外水栓</figcaption></figure>
+</div>
+
+<h2>スコア</h2>
+<div class="score-big"><span class="num">63</span>/100 <span class="badge badge-hold">▲ 条件付きGO</span></div>
+
+<div style="margin:15px 0;">
+  <div class="score-row">
+    <span class="score-label">価格妥当性</span>
+    <div class="score-bar"><div class="score-fill" style="width:70%;background:#f0883e;"></div></div>
+    <span class="score-val">14/20</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">利回り</span>
+    <div class="score-bar"><div class="score-fill" style="width:45%;background:#f85149;"></div></div>
+    <span class="score-val">9/20</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">立地</span>
+    <div class="score-bar"><div class="score-fill" style="width:80%;background:#3fb950;"></div></div>
+    <span class="score-val">12/15</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">建物状態</span>
+    <div class="score-bar"><div class="score-fill" style="width:40%;background:#f85149;"></div></div>
+    <span class="score-val">6/15</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">土地ポテンシャル</span>
+    <div class="score-bar"><div class="score-fill" style="width:80%;background:#3fb950;"></div></div>
+    <span class="score-val">8/10</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">リスク</span>
+    <div class="score-bar"><div class="score-fill" style="width:60%;background:#f0883e;"></div></div>
+    <span class="score-val">6/10</span>
+  </div>
+  <div class="score-row">
+    <span class="score-label">出口戦略</span>
+    <div class="score-bar"><div class="score-fill" style="width:80%;background:#3fb950;"></div></div>
+    <span class="score-val">8/10</span>
+  </div>
+</div>
+
+<h2>物件判定</h2>
+<p style="font-size:0.85em;color:#8b949e;margin-bottom:8px;">写真10枚＋Drive資料をベースに判定</p>
+<div class="photo-item"><span class="risk-low">&#x1F7E2;</span> 青葉区元石川町 -- ブランドエリア。賃貸・売却ともに需要高い</div>
+<div class="photo-item"><span class="risk-low">&#x1F7E2;</span> 積算大幅超え -- 土地値1,800万〜2,700万の担保余力あり</div>
+<div class="photo-item"><span class="risk-low">&#x1F7E2;</span> 眺望良好 -- 写真から眺望資産あり（価格プレミアム要因）</div>
+<div class="photo-item"><span class="risk-low">&#x1F7E2;</span> 建物状態の写真良好 -- リビング・洋室はリフォーム可能な状態</div>
+<div class="photo-item"><span class="risk-mid">&#x1F7E1;</span> 築54年・旧耐震 -- 建物価値ゼロ扱い、耐震補強 or 解体想定</div>
+<div class="photo-item"><span class="risk-mid">&#x1F7E1;</span> 狭あい道路 -- セットバック負担あり（建替時に有効面積減）</div>
+<div class="photo-item"><span class="risk-mid">&#x1F7E1;</span> バス圏 -- 駅徒歩圏ではないため家賃に天井</div>
+<div class="photo-item"><span class="risk-high">&#x1F534;</span> 1,480万は築古戸建として高額 -- 指値交渉必須</div>
+
+<h2>周辺賃貸相場（青葉区元石川町・たまプラーザエリア）</h2>
+<table>
+  <tr><th>戸建3LDK/4LDK 築古リフォーム済</th><td>14〜18万/月</td></tr>
+  <tr><th>戸建4LDK〜 築浅</th><td>20〜28万/月</td></tr>
+  <tr><th>アパート1K</th><td>6〜8万/月</td></tr>
+  <tr><th>アパート2LDK</th><td>10〜13万/月</td></tr>
+  <tr><th>駐車場 月極</th><td>1.5〜2.5万/台</td></tr>
+  <tr><th>本物件の想定賃料</th><td style="color:#3fb950;font-weight:bold;">15万/月（リフォーム後、バス圏・築古）</td></tr>
+</table>
+
+<h2>リフォーム見積もり</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="card-title">DIY併用</div>
+    <div class="card-value neutral">250~400万</div>
+    <div style="font-size:0.75em;color:#8b949e;">水回り・屋根外壁・内装フル更新</div>
+  </div>
+  <div class="card">
+    <div class="card-title">業者丸投げ</div>
+    <div class="card-value negative">500~900万</div>
+    <div style="font-size:0.75em;color:#8b949e;">耐震補強含むとさらに上乗せ</div>
+  </div>
+</div>
+
+<h2>初期投資 内訳（DIY併用想定）</h2>
+<table>
+  <tr><th>物件価格</th><td style="text-align:right;">1,480.0万</td></tr>
+  <tr><th>仲介手数料</th><td style="text-align:right;color:#3fb950;">0万</td></tr>
+  <tr><th>登録免許税</th><td style="text-align:right;">約8.0万</td></tr>
+  <tr><th>司法書士報酬</th><td style="text-align:right;">約10万</td></tr>
+  <tr><th>不動産取得税</th><td style="text-align:right;">約12万</td></tr>
+  <tr><th>印紙税</th><td style="text-align:right;">1万</td></tr>
+  <tr><th>固定資産税精算金</th><td style="text-align:right;">約3万</td></tr>
+  <tr><th>火災保険</th><td style="text-align:right;">約3万</td></tr>
+  <tr style="border-top:2px solid #388bfd;"><th>購入諸費用 小計</th><td style="text-align:right;font-weight:bold;">約37.0万</td></tr>
+  <tr><th>リフォーム費用（DIY併用）</th><td style="text-align:right;">350万</td></tr>
+  <tr style="border-top:2px solid #e6edf3;"><th style="font-weight:bold;color:#e6edf3;">総投資額</th><td style="text-align:right;font-weight:bold;font-size:1.2em;color:#f0883e;">1,867.0万</td></tr>
+</table>
+
+<h2>収支サマリー</h2>
+<div class="section-grid">
+  <div class="card">
+    <div class="card-title">総投資額</div>
+    <div class="card-value">1,867万</div>
+  </div>
+  <div class="card">
+    <div class="card-title">想定賃料</div>
+    <div class="card-value">15万/月</div>
+    <div style="font-size:0.75em;color:#8b949e;">年間180万</div>
+  </div>
+  <div class="card">
+    <div class="card-title">年間ネットCF</div>
+    <div class="card-value positive">+132万/年</div>
+    <div style="font-size:0.75em;color:#8b949e;">固定資産税・保険・管理・修繕積立控除後</div>
+  </div>
+  <div class="card">
+    <div class="card-title">実質利回り</div>
+    <div class="card-value neutral">7.1%</div>
+    <div style="font-size:0.75em;color:#8b949e;">表面9.6% → 実質7.1%（総投資対比）</div>
+  </div>
+</div>
+
+<h2>活用ルート比較</h2>
+<div class="flow-box">           ルート①賃貸     ルート②建替え/戸建新築    ルート③転売(土地値)
+初期投資:   1,867万        1,480万+建物2,500万         1,480万
+年間収入:   180万          (売却4,500万想定)           —
+年間CF:     132万          —                          —
+利回り:     7.1%           —                          —
+5年累計CF:  660万          —                          —
+売却益:     —             +300〜800万                 +300〜1,000万
+最終手残り: +660万（5年）   +300〜800万                +300〜1,000万
+
+推奨: ルート①賃貸（長期）or ③転売（積算超えを活かす）
+土地値勝負で指値1,200万台が通れば本命</div>
+
+<h2>10年保有キャッシュフロー</h2>
+<div class="flow-box">初期投資:      -1,867万
+10年累計CF:    +1,320万
+売却(10年後):  +1,800万（土地値）
+譲渡税(長期):  -40万
+仲介手数料:    -60万
+━━━━━━━━━━━━━━
+最終手残り:    +3,020万
+<span style="color:#3fb950;font-weight:bold;">最終利益:     +1,153万</span></div>
+
+<h2>投資回収タイムライン</h2>
+<div class="timeline">
+  <div class="timeline-item">0年 -- 投資 -1,867万</div>
+  <div class="timeline-item">5年 -- 回収660万（35%）</div>
+  <div class="timeline-item">10年 -- 回収1,320万（71%）</div>
+  <div class="timeline-item highlight">売却込み10年 -- 3,020万（162%）</div>
+</div>
+
+<h2>融資</h2>
+<table>
+  <tr><th>融資難易度</th><td class="risk-mid">▲ 普通（築54年は建物融資困難・土地担保なら可）</td></tr>
+  <tr><th>推奨金融機関</th><td>第1候補：日本政策金融公庫 / 第2候補：オリックス銀行・SBIエステートファイナンス</td></tr>
+  <tr><th>借入想定</th><td>1,200万 / 金利3.5% / 期間20年</td></tr>
+  <tr><th>月々返済</th><td>約7万円</td></tr>
+  <tr><th>年間CF（融資あり）</th><td class="risk-low">+48万（返済控除後）</td></tr>
+</table>
+
+<h2>指値提案</h2>
+<table>
+  <tr><th>推奨指値</th><td style="font-weight:bold;font-size:1.1em;">1,200万円（-280万・19%OFF）</td></tr>
+  <tr><th>根拠(1)</th><td>築54年は建物価値ゼロ。土地値勝負なら積算2,700万の44%で1,200万</td></tr>
+  <tr><th>根拠(2)</th><td>狭あい道路でセットバック負担あり→有効面積減</td></tr>
+  <tr><th>根拠(3)</th><td>リフォーム350〜500万必要。その分を価格に反映要求</td></tr>
+  <tr><th>根拠(4)</th><td>旧耐震で耐震補強 or 建替コスト</td></tr>
+  <tr><th>交渉カード</th><td>現金/融資事前承認済み・現況有姿OK・瑕疵承知</td></tr>
+  <tr><th>理想指値</th><td>1,050万（積算の39%、土地値で通せれば最高）</td></tr>
+</table>
+
+<h2>出口戦略</h2>
+<table>
+  <tr><th>最推奨</th><td><strong>中長期保有7〜10年で賃貸→土地値で売却</strong></td></tr>
+  <tr><th>強み</th><td>青葉区ブランドは長期的に底堅い。土地値が下支え</td></tr>
+  <tr><th>弱み</th><td>バス圏＋築古で家賃天井。空室リスク要注意</td></tr>
+  <tr><th>代替案</th><td>解体→更地化で売却（土地値2,000万前後）</td></tr>
+</table>
+
+<h2>推奨アクション</h2>
+<div class="action-box">
+<ol>
+  <li>Driveの<strong>道路関係資料</strong>を精読（再建築可否・セットバック量）</li>
+  <li><strong>土地面積を正式確認</strong>（概要書 or 登記取得）</li>
+  <li>現地確認（バス便頻度・周辺環境・建物内部）</li>
+  <li>指値<strong>1,200万</strong>で買付 → 通れば積算超えで勝ち確</li>
+  <li>1,400万以上から下がらなければ見送り</li>
+</ol>
+</div>
+
+<!-- 判断ボタンエリア -->
+<div class="decision-area" id="decisionArea">
+  <h2>この物件どうする？</h2>
+  <div class="decision-buttons" id="decisionButtons">
+    <button class="btn btn-interest" onclick="showPanel('interest')">興味ある</button>
+    <button class="btn btn-buy" onclick="showPanel('buy')">購入したい</button>
+    <button class="btn btn-skip" onclick="showPanel('skip')">要らない</button>
+  </div>
+  <div class="panel panel-interest" id="panel-interest">
+    <h3>どの部分を詳しく知りたいですか？</h3>
+    <textarea id="interestInput" placeholder="例：&#10;・狭あい道路のセットバック量&#10;・元石川町の賃貸募集実例&#10;・建替え or リフォーム どちらが有利か"></textarea>
+    <button class="btn-submit" onclick="submitInterest()">追加分析を依頼する</button>
+    <button class="btn-back" onclick="resetPanel()">戻る</button>
+    <div id="interestResult" style="margin-top:15px;"></div>
+  </div>
+  <div class="panel panel-buy" id="panel-buy">
+    <h3>購入に向けて準備するもの</h3>
+    <ul class="checklist">
+      <li>土地面積・接道の正式確認</li>
+      <li>買付証明書（指値1,200万）</li>
+      <li>融資事前審査（公庫・オリックス等）</li>
+      <li>リフォーム計画書（DIY併用350万）</li>
+      <li>青葉区の客付け業者リスト</li>
+    </ul>
+    <textarea id="buyInput" placeholder="追加要望"></textarea>
+    <button class="btn-submit" onclick="submitBuy()">購入準備を開始する</button>
+    <button class="btn-back" onclick="resetPanel()">戻る</button>
+    <div id="buyResult" style="margin-top:15px;"></div>
+  </div>
+  <div class="panel panel-skip" id="panel-skip">
+    <p style="font-size:1.2em;margin-bottom:10px;">この物件を見送りますか？</p>
+    <button class="btn" style="background:#da3633;color:#fff;" onclick="confirmSkip()">見送り確定</button>
+    <button class="btn-back" onclick="resetPanel()">やっぱり戻る</button>
+    <div id="skipResult" style="margin-top:15px;"></div>
+  </div>
+</div>
+
+<div class="footer">CCカンパニー 不動産部門｜生成日: 2026-04-15</div>
+
+</div>
+
+<script>
+function showPanel(type) {
+  document.getElementById('decisionButtons').style.display = 'none';
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + type).classList.add('active');
+}
+function resetPanel() {
+  document.getElementById('decisionButtons').style.display = 'flex';
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+}
+function submitInterest() {
+  const input = document.getElementById('interestInput').value;
+  if (!input.trim()) { alert('知りたい内容を入力してください'); return; }
+  document.getElementById('interestResult').innerHTML = '<div style="background:#0d1117;border:1px solid #1f6feb;border-radius:6px;padding:15px;"><p style="color:#3fb950;font-weight:bold;">追加分析リクエストを受け付けました</p><p style="margin-top:5px;">' + input.replace(/\n/g, '<br>') + '</p></div>';
+}
+function submitBuy() {
+  document.getElementById('buyResult').innerHTML = '<div style="background:#0d1117;border:1px solid #238636;border-radius:6px;padding:15px;"><p style="color:#3fb950;font-weight:bold;">購入準備リクエストを受け付けました</p></div>';
+}
+function confirmSkip() {
+  document.getElementById('skipResult').innerHTML = '<div style="background:#0d1117;border:1px solid #da3633;border-radius:6px;padding:15px;"><p style="color:#f85149;font-weight:bold;">FD-2026-013 を見送りにしました</p></div>';
+}
+</script>
+
+</body>
+</html>
